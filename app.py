@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import zipfile
-import io
 
 st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
 
@@ -15,12 +14,12 @@ if uploaded_zip is not None:
                 with zip_ref.open('Dataset.csv') as csv_file:
                     df = pd.read_csv(csv_file)
 
-                # Preprocessing: convert string lists to actual lists
+                # Preprocessing
                 df['Genre'] = df['Genre'].fillna("").apply(lambda x: [i.strip() for i in x.split(",")])
                 df['Tags'] = df['Tags'].fillna("").apply(lambda x: [i.strip().strip('"') for i in x.split(",")])
                 df['Categories'] = df['Categories'].fillna("").apply(lambda x: [i.strip() for i in x.split(",")])
 
-                # Sidebar navigation
+                # Sidebar
                 st.sidebar.title("Navigasi")
                 page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Genre", "Tags", "Categories"])
 
@@ -28,7 +27,7 @@ if uploaded_zip is not None:
                 if page == "Beranda":
                     st.title("🎮 Sistem Rekomendasi Game")
                     st.write("Berikut adalah beberapa game dari Steam:")
-                    for i, row in df.iterrows():
+                    for _, row in df.iterrows():
                         st.subheader(row['Name'])
                         st.image(row['Header Image'], width=300)
                         st.write(row['Short Description'])
@@ -37,14 +36,15 @@ if uploaded_zip is not None:
 
                 # Halaman Genre
                 elif page == "Genre":
-                    st.title("🎯 Rekomendasi Berdasarkan Genre")
+                    st.title("🎯 Pilih Genre")
                     all_genres = sorted(set(g for genres in df['Genre'] for g in genres))
-                    selected_genre = st.selectbox("Pilih Genre", all_genres)
-                    filtered = df[df['Genre'].apply(lambda x: selected_genre in x)]
+                    selected_genre = st.selectbox("Klik untuk memilih genre:", all_genres)
 
+                    st.markdown("---")
+                    st.subheader(f"Game dengan genre **{selected_genre}**:")
+                    filtered = df[df['Genre'].apply(lambda x: selected_genre in x)]
                     if not filtered.empty:
-                        st.write(f"Menampilkan game dengan genre **{selected_genre}**:")
-                        for i, row in filtered.iterrows():
+                        for _, row in filtered.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
@@ -54,14 +54,15 @@ if uploaded_zip is not None:
 
                 # Halaman Tags
                 elif page == "Tags":
-                    st.title("🏷️ Rekomendasi Berdasarkan Tags")
+                    st.title("🏷️ Pilih Tag")
                     all_tags = sorted(set(tag for tags in df['Tags'] for tag in tags))
-                    selected_tag = st.selectbox("Pilih Tag", all_tags)
-                    filtered = df[df['Tags'].apply(lambda x: selected_tag in x)]
+                    selected_tag = st.selectbox("Klik untuk memilih tag:", all_tags)
 
+                    st.markdown("---")
+                    st.subheader(f"Game dengan tag **{selected_tag}**:")
+                    filtered = df[df['Tags'].apply(lambda x: selected_tag in x)]
                     if not filtered.empty:
-                        st.write(f"Menampilkan game dengan tag **{selected_tag}**:")
-                        for i, row in filtered.iterrows():
+                        for _, row in filtered.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
@@ -71,14 +72,15 @@ if uploaded_zip is not None:
 
                 # Halaman Categories
                 elif page == "Categories":
-                    st.title("📂 Rekomendasi Berdasarkan Categories")
+                    st.title("📂 Pilih Kategori")
                     all_categories = sorted(set(cat for cats in df['Categories'] for cat in cats))
-                    selected_cat = st.selectbox("Pilih Kategori", all_categories)
-                    filtered = df[df['Categories'].apply(lambda x: selected_cat in x)]
+                    selected_cat = st.selectbox("Klik untuk memilih kategori:", all_categories)
 
+                    st.markdown("---")
+                    st.subheader(f"Game dengan kategori **{selected_cat}**:")
+                    filtered = df[df['Categories'].apply(lambda x: selected_cat in x)]
                     if not filtered.empty:
-                        st.write(f"Menampilkan game dengan kategori **{selected_cat}**:")
-                        for i, row in filtered.iterrows():
+                        for _, row in filtered.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
