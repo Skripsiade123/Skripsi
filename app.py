@@ -12,6 +12,16 @@ st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
 if 'history' not in st.session_state:
     st.session_state.history = []
 
+@st.cache_resource
+def train_model(df, target_column):
+    tfidf_vectorizer = TfidfVectorizer()
+    X = tfidf_vectorizer.fit_transform(df['combined_features'])
+    y = df[target_column]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = SVC(kernel='linear', probability=True)
+    model.fit(X_train, y_train)
+    return tfidf_vectorizer, model
+
 # Upload file ZIP yang berisi Dataset.csv
 uploaded_zip = st.file_uploader("Upload file ZIP yang berisi Dataset.csv", type="zip")
 
@@ -34,13 +44,7 @@ if uploaded_zip is not None:
                 TARGET_GENRE = 'Action'
                 df['is_target_genre'] = df['Genre'].apply(lambda genres: TARGET_GENRE in genres)
 
-                tfidf_vectorizer = TfidfVectorizer()
-                X = tfidf_vectorizer.fit_transform(df['combined_features'])
-                y = df['is_target_genre']
-
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-                svm_model = SVC(kernel='linear', probability=True)
-                svm_model.fit(X_train, y_train)
+                tfidf_vectorizer, svm_model = train_model(df, 'is_target_genre')
 
                 df_cleaned = df.copy()
 
