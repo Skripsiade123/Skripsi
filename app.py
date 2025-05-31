@@ -29,7 +29,7 @@ def load_model(page):
     return tfidf_vectorizer, svm_model
 
 # Sidebar untuk memilih sumber dataset
-st.sidebar.subheader("Sumber Dataset")
+#st.sidebar.subheader("Sumber Dataset")
 use_github = st.sidebar.checkbox("Gunakan dataset dari GitHub")
 
 if use_github:
