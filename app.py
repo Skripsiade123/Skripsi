@@ -57,7 +57,7 @@ if uploaded_zip is not None:
                 if page == "Beranda":
                     st.title("🎮 Sistem Rekomendasi Game")
                     st.write("Berikut adalah beberapa game dari Steam:")
-                    for _, row in df.iterrows():
+                    for _, row in df.head(10).iterrows():  # Batasi hanya 10 game
                         st.subheader(row['Name'])
                         st.image(row['Header Image'], width=300)
                         st.write(row['Short Description'])
