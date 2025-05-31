@@ -62,6 +62,8 @@ if uploaded_zip is not None:
                         st.image(row['Header Image'], width=300)
                         st.write(row['Short Description'])
                         st.write(f"**Genre:** {', '.join(row['Genre'])}")
+                        st.write(f"**Tags:** {', '.join(row['Tags'])}")
+                        st.write(f"**Categories:** {', '.join(row['Categories'])}")
                         st.markdown("---")
 
                 # Rekomendasi Berdasarkan Genre
@@ -79,6 +81,9 @@ if uploaded_zip is not None:
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
+                            st.write(f"**Genre:** {', '.join(row['Genre'])}")
+                            st.write(f"**Tags:** {', '.join(row['Tags'])}")
+                            st.write(f"**Categories:** {', '.join(row['Categories'])}")
                             st.markdown("---")
                         st.session_state.history.append((datetime.now(), "Genre", selected_genre, recommended['Name'].tolist()))
                     else:
@@ -99,6 +104,9 @@ if uploaded_zip is not None:
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
+                            st.write(f"**Genre:** {', '.join(row['Genre'])}")
+                            st.write(f"**Tags:** {', '.join(row['Tags'])}")
+                            st.write(f"**Categories:** {', '.join(row['Categories'])}")
                             st.markdown("---")
                         st.session_state.history.append((datetime.now(), "Tag", selected_tag, recommended['Name'].tolist()))
                     else:
@@ -119,6 +127,9 @@ if uploaded_zip is not None:
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
+                            st.write(f"**Genre:** {', '.join(row['Genre'])}")
+                            st.write(f"**Tags:** {', '.join(row['Tags'])}")
+                            st.write(f"**Categories:** {', '.join(row['Categories'])}")
                             st.markdown("---")
                         st.session_state.history.append((datetime.now(), "Kategori", selected_cat, recommended['Name'].tolist()))
                     else:
