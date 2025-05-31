@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
 import zipfile
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
+import joblib
 from datetime import datetime
 
 st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
@@ -12,15 +10,12 @@ st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
 if 'history' not in st.session_state:
     st.session_state.history = []
 
+# Load model dan vectorizer yang telah dilatih
 @st.cache_resource
-def train_model(df, target_column):
-    tfidf_vectorizer = TfidfVectorizer()
-    X = tfidf_vectorizer.fit_transform(df['combined_features'])
-    y = df[target_column]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = SVC(kernel='linear', probability=True)
-    model.fit(X_train, y_train)
-    return tfidf_vectorizer, model
+def load_model():
+    tfidf_vectorizer = joblib.load('tfidf.pkl')
+    svm_model = joblib.load('svm_model.pkl')
+    return tfidf_vectorizer, svm_model
 
 # Upload file ZIP yang berisi Dataset.csv
 uploaded_zip = st.file_uploader("Upload file ZIP yang berisi Dataset.csv", type="zip")
@@ -41,10 +36,7 @@ if uploaded_zip is not None:
                                           df['Tags'].apply(lambda x: ' '.join(x)) + ' ' + \
                                           df['Categories'].apply(lambda x: ' '.join(x))
 
-                TARGET_GENRE = 'Action'
-                df['is_target_genre'] = df['Genre'].apply(lambda genres: TARGET_GENRE in genres)
-
-                tfidf_vectorizer, svm_model = train_model(df, 'is_target_genre')
+                tfidf_vectorizer, svm_model = load_model()
 
                 df_cleaned = df.copy()
 
@@ -65,6 +57,7 @@ if uploaded_zip is not None:
 
                 # Rekomendasi Berdasarkan Genre
                 elif page == "Rekomendasi Genre":
+                    TARGET_GENRE = 'Action'
                     selected_genre = st.selectbox("Pilih genre sebagai filter awal:", sorted(set(g for genres in df['Genre'] for g in genres)))
                     filtered_games = df_cleaned[df_cleaned['Genre'].apply(lambda x: selected_genre in x)]
                     if not filtered_games.empty:
@@ -104,6 +97,7 @@ if uploaded_zip is not None:
 
                 # Rekomendasi Berdasarkan Kategori
                 elif page == "Rekomendasi Kategori":
+                    TARGET_CAT = 'Single-player'
                     selected_cat = st.selectbox("Pilih kategori sebagai filter awal:", sorted(set(c for cats in df['Categories'] for c in cats)))
                     filtered_games = df_cleaned[df_cleaned['Categories'].apply(lambda x: selected_cat in x)]
                     if not filtered_games.empty:
@@ -111,7 +105,7 @@ if uploaded_zip is not None:
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                        st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi model untuk target '{TARGET_GENRE}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi model untuk target '{TARGET_CAT}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
