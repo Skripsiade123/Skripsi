@@ -58,7 +58,7 @@ if uploaded_zip is not None:
                 df_cleaned = df.copy()
 
                 # Sidebar
-                st.sidebar.title("Navigasi")
+                st.sidebar.title("Dashboard")
                 page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
                 tfidf_vectorizer, svm_model = load_model(page)
