@@ -67,13 +67,13 @@ if uploaded_zip is not None:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
+                        recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
                         st.subheader(f"Rekomendasi Game berdasarkan genre '{selected_genre}' dan validasi model untuk target '{TARGET_GENRE}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
                             st.markdown("---")
-                        # Simpan histori
                         st.session_state.history.append((datetime.now(), "Genre", selected_genre, recommended['Name'].tolist()))
                     else:
                         st.warning("Tidak ada game yang cocok.")
@@ -87,13 +87,13 @@ if uploaded_zip is not None:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
+                        recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
                         st.subheader(f"Rekomendasi Game berdasarkan tag '{selected_tag}' dan validasi model untuk target '{TARGET_TAG}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
                             st.markdown("---")
-                        # Simpan histori
                         st.session_state.history.append((datetime.now(), "Tag", selected_tag, recommended['Name'].tolist()))
                     else:
                         st.warning("Tidak ada game yang cocok.")
@@ -106,13 +106,13 @@ if uploaded_zip is not None:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
+                        recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
                         st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi model untuk target '{TARGET_GENRE}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
                             st.markdown("---")
-                        # Simpan histori
                         st.session_state.history.append((datetime.now(), "Kategori", selected_cat, recommended['Name'].tolist()))
                     else:
                         st.warning("Tidak ada game yang cocok.")
