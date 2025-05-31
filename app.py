@@ -30,7 +30,7 @@ def load_model(page):
 
 # Sidebar untuk memilih sumber dataset
 #st.sidebar.subheader("Sumber Dataset")
-#use_github = st.sidebar.checkbox("Gunakan dataset dari GitHub")
+use_github = st.sidebar.checkbox("")
 
 if use_github:
     github_url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
