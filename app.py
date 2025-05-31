@@ -38,7 +38,7 @@ if use_github:
         response = requests.get(github_url)
         response.raise_for_status()
         uploaded_zip = io.BytesIO(response.content)
-        st.success("Berhasil mengambil Dataset.zip dari GitHub.")
+        #st.success("Berhasil mengambil Dataset.zip dari GitHub.")
     except requests.exceptions.RequestException as e:
         st.error(f"Gagal mengambil file dari GitHub: {e}")
         uploaded_zip = None
