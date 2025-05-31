@@ -28,22 +28,16 @@ def load_model(page):
         tfidf_vectorizer = svm_model = None
     return tfidf_vectorizer, svm_model
 
-# Sidebar untuk memilih sumber dataset
-#st.sidebar.subheader("Sumber Dataset")
-use_github = st.sidebar.checkbox("Dataset")
-
-if use_github:
-    github_url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
-    try:
-        response = requests.get(github_url)
-        response.raise_for_status()
-        uploaded_zip = io.BytesIO(response.content)
-        #st.success("Berhasil mengambil Dataset.zip dari GitHub.")
-    except requests.exceptions.RequestException as e:
-        st.error(f"Gagal mengambil file dari GitHub: {e}")
-        uploaded_zip = None
-else:
-    uploaded_zip = st.file_uploader("Upload file ZIP yang berisi Dataset.csv", type="zip")
+# Ambil dataset hanya dari GitHub
+github_url = "https://github.com/USERNAME/REPO_NAME/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
+try:
+    response = requests.get(github_url)
+    response.raise_for_status()
+    uploaded_zip = io.BytesIO(response.content)
+    # st.success("Berhasil mengambil Dataset.zip dari GitHub.")  # Komentar agar tidak tampil
+except requests.exceptions.RequestException as e:
+    st.error(f"Gagal mengambil file dari GitHub: {e}")
+    uploaded_zip = None
 
 if uploaded_zip is not None:
     try:
@@ -168,4 +162,4 @@ if uploaded_zip is not None:
     except zipfile.BadZipFile:
         st.error("File ZIP tidak valid.")
 else:
-    st.info("Silakan upload file ZIP yang berisi Dataset.csv atau aktifkan opsi GitHub.")
+    st.info("Silakan pastikan file Dataset.zip dari GitHub dapat diakses.")
