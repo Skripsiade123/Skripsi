@@ -33,7 +33,7 @@ st.sidebar.subheader("Sumber Dataset")
 use_github = st.sidebar.checkbox("Gunakan dataset dari GitHub")
 
 if use_github:
-    github_url = "https://github.com/USERNAME/REPO_NAME/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
+    github_url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
     try:
         response = requests.get(github_url)
         response.raise_for_status()
