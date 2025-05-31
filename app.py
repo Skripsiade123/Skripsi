@@ -10,11 +10,20 @@ st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-# Load model dan vectorizer yang telah dilatih
+# Load model dan vectorizer yang telah dilatih berdasarkan halaman
 @st.cache_resource
-def load_model():
-    tfidf_vectorizer = joblib.load('tfidf.pkl')
-    svm_model = joblib.load('svm_model.pkl')
+def load_model(page):
+    if page == "Rekomendasi Genre":
+        tfidf_vectorizer = joblib.load('tfidf_vectorizer.pkl')
+        svm_model = joblib.load('svm_model.pkl')
+    elif page == "Rekomendasi Tag":
+        tfidf_vectorizer = joblib.load('tfidf_vectorizer_tags.pkl')
+        svm_model = joblib.load('svm_model_tags.pkl')
+    elif page == "Rekomendasi Kategori":
+        tfidf_vectorizer = joblib.load('tfidf_vectorizer_categories.pkl')
+        svm_model = joblib.load('svm_model_categories.pkl')
+    else:
+        tfidf_vectorizer = svm_model = None
     return tfidf_vectorizer, svm_model
 
 # Upload file ZIP yang berisi Dataset.csv
@@ -36,13 +45,13 @@ if uploaded_zip is not None:
                                           df['Tags'].apply(lambda x: ' '.join(x)) + ' ' + \
                                           df['Categories'].apply(lambda x: ' '.join(x))
 
-                tfidf_vectorizer, svm_model = load_model()
-
                 df_cleaned = df.copy()
 
                 # Sidebar
                 st.sidebar.title("Navigasi")
                 page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
+
+                tfidf_vectorizer, svm_model = load_model(page)
 
                 # Halaman Beranda
                 if page == "Beranda":
