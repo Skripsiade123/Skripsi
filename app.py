@@ -29,7 +29,7 @@ def load_model(page):
     return tfidf_vectorizer, svm_model
 
 # Ambil dataset hanya dari GitHub
-github_url = "https://github.com/USERNAME/REPO_NAME/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
+github_url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
 try:
     response = requests.get(github_url)
     response.raise_for_status()
