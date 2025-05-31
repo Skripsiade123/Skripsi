@@ -4,8 +4,13 @@ import zipfile
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
+from datetime import datetime
 
 st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
+
+# Inisialisasi session state untuk histori
+if 'history' not in st.session_state:
+    st.session_state.history = []
 
 # Upload file ZIP yang berisi Dataset.csv
 uploaded_zip = st.file_uploader("Upload file ZIP yang berisi Dataset.csv", type="zip")
@@ -41,7 +46,7 @@ if uploaded_zip is not None:
 
                 # Sidebar
                 st.sidebar.title("Navigasi")
-                page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Genre", "Tags", "Categories", "Rekomendasi Genre (SVM)", "Rekomendasi Tags (SVM)", "Rekomendasi Categories (SVM)"])
+                page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
                 # Halaman Beranda
                 if page == "Beranda":
@@ -54,76 +59,27 @@ if uploaded_zip is not None:
                         st.write(f"**Genre:** {', '.join(row['Genre'])}")
                         st.markdown("---")
 
-                # Halaman Genre
-                elif page == "Genre":
-                    st.title("🎯 Pilih Genre")
-                    all_genres = sorted(set(g for genres in df['Genre'] for g in genres))
-                    selected_genre = st.selectbox("Klik untuk memilih genre:", all_genres)
-                    st.markdown("---")
-                    st.subheader(f"Game dengan genre **{selected_genre}**:")
-                    filtered = df[df['Genre'].apply(lambda x: selected_genre in x)]
-                    if not filtered.empty:
-                        for _, row in filtered.iterrows():
-                            st.subheader(row['Name'])
-                            st.image(row['Header Image'], width=300)
-                            st.write(row['Short Description'])
-                            st.markdown("---")
-                    else:
-                        st.warning("Tidak ada game dengan genre ini.")
-
-                # Halaman Tags
-                elif page == "Tags":
-                    st.title("🏷️ Pilih Tag")
-                    all_tags = sorted(set(tag for tags in df['Tags'] for tag in tags))
-                    selected_tag = st.selectbox("Klik untuk memilih tag:", all_tags)
-                    st.markdown("---")
-                    st.subheader(f"Game dengan tag **{selected_tag}**:")
-                    filtered = df[df['Tags'].apply(lambda x: selected_tag in x)]
-                    if not filtered.empty:
-                        for _, row in filtered.iterrows():
-                            st.subheader(row['Name'])
-                            st.image(row['Header Image'], width=300)
-                            st.write(row['Short Description'])
-                            st.markdown("---")
-                    else:
-                        st.warning("Tidak ada game dengan tag ini.")
-
-                # Halaman Categories
-                elif page == "Categories":
-                    st.title("📂 Pilih Kategori")
-                    all_categories = sorted(set(cat for cats in df['Categories'] for cat in cats))
-                    selected_cat = st.selectbox("Klik untuk memilih kategori:", all_categories)
-                    st.markdown("---")
-                    st.subheader(f"Game dengan kategori **{selected_cat}**:")
-                    filtered = df[df['Categories'].apply(lambda x: selected_cat in x)]
-                    if not filtered.empty:
-                        for _, row in filtered.iterrows():
-                            st.subheader(row['Name'])
-                            st.image(row['Header Image'], width=300)
-                            st.write(row['Short Description'])
-                            st.markdown("---")
-                    else:
-                        st.warning("Tidak ada game dengan kategori ini.")
-
-                # Rekomendasi Genre SVM
-                elif page == "Rekomendasi Genre (SVM)":
+                # Rekomendasi Berdasarkan Genre
+                elif page == "Rekomendasi Genre":
                     selected_genre = st.selectbox("Pilih genre sebagai filter awal:", sorted(set(g for genres in df['Genre'] for g in genres)))
                     filtered_games = df_cleaned[df_cleaned['Genre'].apply(lambda x: selected_genre in x)]
                     if not filtered_games.empty:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
-                        st.subheader(f"Rekomendasi Game berdasarkan genre '{selected_genre}' dan validasi SVM untuk target '{TARGET_GENRE}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan genre '{selected_genre}' dan validasi model untuk target '{TARGET_GENRE}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
                             st.markdown("---")
+                        # Simpan histori
+                        st.session_state.history.append((datetime.now(), "Genre", selected_genre, recommended['Name'].tolist()))
                     else:
                         st.warning("Tidak ada game yang cocok.")
 
-                # Rekomendasi Tags SVM
-                elif page == "Rekomendasi Tags (SVM)":
+                # Rekomendasi Berdasarkan Tag
+                elif page == "Rekomendasi Tag":
                     TARGET_TAG = 'Indie'
                     selected_tag = st.selectbox("Pilih tag sebagai filter awal:", sorted(set(t for tags in df['Tags'] for t in tags)))
                     filtered_games = df_cleaned[df_cleaned['Tags'].apply(lambda x: selected_tag in x)]
@@ -131,31 +87,47 @@ if uploaded_zip is not None:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
-                        st.subheader(f"Rekomendasi Game berdasarkan tag '{selected_tag}' dan validasi SVM untuk target '{TARGET_TAG}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan tag '{selected_tag}' dan validasi model untuk target '{TARGET_TAG}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
                             st.markdown("---")
+                        # Simpan histori
+                        st.session_state.history.append((datetime.now(), "Tag", selected_tag, recommended['Name'].tolist()))
                     else:
                         st.warning("Tidak ada game yang cocok.")
 
-                # Rekomendasi Categories SVM
-                elif page == "Rekomendasi Categories (SVM)":
+                # Rekomendasi Berdasarkan Kategori
+                elif page == "Rekomendasi Kategori":
                     selected_cat = st.selectbox("Pilih kategori sebagai filter awal:", sorted(set(c for cats in df['Categories'] for c in cats)))
                     filtered_games = df_cleaned[df_cleaned['Categories'].apply(lambda x: selected_cat in x)]
                     if not filtered_games.empty:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
-                        st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi SVM untuk target '{TARGET_GENRE}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi model untuk target '{TARGET_GENRE}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
                             st.write(row['Short Description'])
                             st.markdown("---")
+                        # Simpan histori
+                        st.session_state.history.append((datetime.now(), "Kategori", selected_cat, recommended['Name'].tolist()))
                     else:
                         st.warning("Tidak ada game yang cocok.")
+
+                # Halaman Histori
+                elif page == "Histori":
+                    st.title("📜 Histori Rekomendasi")
+                    if st.session_state.history:
+                        for waktu, tipe, nilai, hasil in reversed(st.session_state.history):
+                            st.markdown(f"**{waktu.strftime('%Y-%m-%d %H:%M:%S')}** - Rekomendasi berdasarkan **{tipe}** '{nilai}':")
+                            for nama in hasil:
+                                st.write(f"- {nama}")
+                            st.markdown("---")
+                    else:
+                        st.info("Belum ada histori rekomendasi.")
 
             else:
                 st.error("File 'Dataset.csv' tidak ditemukan di dalam ZIP.")
