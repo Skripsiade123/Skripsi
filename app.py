@@ -75,7 +75,6 @@ if uploaded_zip is not None:
 
                     ### 4. Klasifikasi dengan SVM
                     - Algoritma **Support Vector Machine (SVM)** digunakan sebagai model klasifikasi untuk mengidentifikasi apakah suatu game sesuai untuk direkomendasikan berdasarkan fitur yang telah diekstraksi.
-                    - Model ini dilatih secara **multi-label classification** menggunakan pembungkus `MultiOutputClassifier` jika dibutuhkan.
 
                     ### 5. Rekomendasi
                     - Berdasarkan input pengguna (genre, tag, atau kategori), sistem memfilter game dan memprediksi relevansinya menggunakan model SVM yang telah dilatih.
@@ -106,7 +105,7 @@ if uploaded_zip is not None:
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         if not recommended.empty:
                             recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                        st.subheader(f"Rekomendasi Game berdasarkan genre '{selected_genre}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan genre")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
@@ -128,7 +127,7 @@ if uploaded_zip is not None:
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         if not recommended.empty:
                             recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                        st.subheader(f"Rekomendasi Game berdasarkan tag '{selected_tag}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan tag")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
@@ -150,7 +149,7 @@ if uploaded_zip is not None:
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         if not recommended.empty:
                             recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                        st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}':")
+                        st.subheader(f"Rekomendasi Game berdasarkan kategori")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
                             st.image(row['Header Image'], width=300)
