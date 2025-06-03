@@ -84,7 +84,7 @@ if uploaded_zip is not None:
                         st.markdown("---")
 
                 elif page == "Rekomendasi Genre":
-                    TARGET_GENRE = 'Action'
+                    TARGET_GENRE = 'Casual'
                     selected_genre = st.selectbox("Pilih genre sebagai filter awal:", sorted(set(g for genres in df['Genre'] for g in genres)))
                     filtered_games = df_cleaned[df_cleaned['Genre'].apply(lambda x: selected_genre in x)]
                     if not filtered_games.empty:
@@ -93,7 +93,7 @@ if uploaded_zip is not None:
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         if not recommended.empty:
                             recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                            st.subheader(f"Rekomendasi Game berdasarkan genre '{selected_genre}' dan validasi model untuk target '{TARGET_GENRE}':")
+                            st.subheader(f" ")
                             for _, row in recommended.iterrows():
                                 st.subheader(row['Name'])
                                 st.image(row['Header Image'], width=300)
@@ -118,7 +118,7 @@ if uploaded_zip is not None:
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         if not recommended.empty:
                             recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                            st.subheader(f"Rekomendasi Game berdasarkan tag '{selected_tag}' dan validasi model untuk target '{TARGET_TAG}':")
+                            st.subheader(f" ")
                             for _, row in recommended.iterrows():
                                 st.subheader(row['Name'])
                                 st.image(row['Header Image'], width=300)
@@ -143,7 +143,7 @@ if uploaded_zip is not None:
                         recommended = filtered_games[filtered_games['Predicted'] == 1]
                         if not recommended.empty:
                             recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
-                            st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi model untuk target '{TARGET_CAT}':")
+                            st.subheader(f" ")
                             for _, row in recommended.iterrows():
                                 st.subheader(row['Name'])
                                 st.image(row['Header Image'], width=300)
