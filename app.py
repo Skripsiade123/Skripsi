@@ -29,12 +29,11 @@ def load_model(page):
     return tfidf_vectorizer, svm_model
 
 # Ambil dataset hanya dari GitHub
-github_url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"  # Ganti sesuai URL kamu
+github_url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"
 try:
     response = requests.get(github_url)
     response.raise_for_status()
     uploaded_zip = io.BytesIO(response.content)
-    # st.success("Berhasil mengambil Dataset.zip dari GitHub.")  # Komentar agar tidak tampil
 except requests.exceptions.RequestException as e:
     st.error(f"Gagal mengambil file dari GitHub: {e}")
     uploaded_zip = None
@@ -59,15 +58,42 @@ if uploaded_zip is not None:
 
                 # Sidebar
                 st.sidebar.title("Dashboard")
-                page = st.sidebar.radio("Pilih Halaman", ["Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
+                page = st.sidebar.radio("Pilih Halaman", ["\U0001F4D8 Penjelasan Metode", "Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
                 tfidf_vectorizer, svm_model = load_model(page)
 
+                # Halaman Penjelasan Metode
+                if page == "\U0001F4D8 Penjelasan Metode":
+                    st.title("\U0001F4D8 Penjelasan Metode dan Algoritma")
+                    st.markdown("""
+                    Aplikasi ini menggunakan **Content-Based Filtering** untuk merekomendasikan game berdasarkan kemiripan kontennya. 
+                    Berikut adalah metode dan algoritma yang digunakan:
+
+                    ### 🔍 1. Preprocessing
+                    - Data teks dari kolom `Genre`, `Tags`, dan `Categories` digabung menjadi satu kolom fitur.
+                    - Teks dibersihkan dan dikonversi menjadi format numerik menggunakan **TF-IDF (Term Frequency - Inverse Document Frequency)**.
+
+                    ### 🤖 2. Algoritma Klasifikasi
+                    - Model menggunakan **Support Vector Machine (SVM)** dengan kernel linear.
+                    - Model dilatih untuk mengenali game mana yang cocok untuk label tertentu (misalnya: `'Action'`, `'Indie'`, atau `'Single-player'`).
+                    - Untuk setiap filter (genre/tag/kategori), model SVM memprediksi apakah game cocok (label = 1) atau tidak cocok (label = 0).
+
+                    ### 🧠 3. Proses Rekomendasi
+                    - Pengguna memilih filter seperti Genre atau Tag.
+                    - Model SVM mengklasifikasikan game yang sesuai dengan filter tersebut.
+                    - Game yang diklasifikasikan sebagai cocok akan ditampilkan sebagai rekomendasi.
+
+                    ### 📂 4. Model dan Dataset
+                    - Model dan vectorizer telah dilatih sebelumnya dan disimpan dalam file `.pkl`.
+                    - Dataset diambil dari file ZIP langsung melalui GitHub agar aplikasi tetap ringan dan mudah diperbarui.
+                    """)
+                    st.success("Silakan gunakan sidebar di kiri untuk masuk ke halaman rekomendasi atau beranda.")
+
                 # Halaman Beranda
-                if page == "Beranda":
+                elif page == "Beranda":
                     st.title("🎮 Sistem Rekomendasi Game")
                     st.write("Berikut adalah beberapa game:")
-                    for _, row in df.head(10).iterrows():  # Batasi hanya 10 game
+                    for _, row in df.head(10).iterrows():
                         st.subheader(row['Name'])
                         st.image(row['Header Image'], width=300)
                         st.write(row['Short Description'])
@@ -76,7 +102,7 @@ if uploaded_zip is not None:
                         st.write(f"**Categories:** {', '.join(row['Categories'])}")
                         st.markdown("---")
 
-                # Rekomendasi Berdasarkan Genre
+                # Rekomendasi Genre
                 elif page == "Rekomendasi Genre":
                     TARGET_GENRE = 'Action'
                     selected_genre = st.selectbox("Pilih genre sebagai filter awal:", sorted(set(g for genres in df['Genre'] for g in genres)))
@@ -84,8 +110,7 @@ if uploaded_zip is not None:
                     if not filtered_games.empty:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
-                        recommended = filtered_games[filtered_games['Predicted'] == 1]
-                        recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
+                        recommended = filtered_games[filtered_games['Predicted'] == 1].sample(n=min(10, len(filtered_games)), random_state=42)
                         st.subheader(f"Rekomendasi Game berdasarkan genre '{selected_genre}' dan validasi model untuk target '{TARGET_GENRE}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
@@ -99,7 +124,7 @@ if uploaded_zip is not None:
                     else:
                         st.warning("Tidak ada game yang cocok.")
 
-                # Rekomendasi Berdasarkan Tag
+                # Rekomendasi Tag
                 elif page == "Rekomendasi Tag":
                     TARGET_TAG = 'Indie'
                     selected_tag = st.selectbox("Pilih tag sebagai filter awal:", sorted(set(t for tags in df['Tags'] for t in tags)))
@@ -107,8 +132,7 @@ if uploaded_zip is not None:
                     if not filtered_games.empty:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
-                        recommended = filtered_games[filtered_games['Predicted'] == 1]
-                        recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
+                        recommended = filtered_games[filtered_games['Predicted'] == 1].sample(n=min(10, len(filtered_games)), random_state=42)
                         st.subheader(f"Rekomendasi Game berdasarkan tag '{selected_tag}' dan validasi model untuk target '{TARGET_TAG}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
@@ -122,7 +146,7 @@ if uploaded_zip is not None:
                     else:
                         st.warning("Tidak ada game yang cocok.")
 
-                # Rekomendasi Berdasarkan Kategori
+                # Rekomendasi Kategori
                 elif page == "Rekomendasi Kategori":
                     TARGET_CAT = 'Single-player'
                     selected_cat = st.selectbox("Pilih kategori sebagai filter awal:", sorted(set(c for cats in df['Categories'] for c in cats)))
@@ -130,8 +154,7 @@ if uploaded_zip is not None:
                     if not filtered_games.empty:
                         tfidf_filtered = tfidf_vectorizer.transform(filtered_games['combined_features'])
                         filtered_games['Predicted'] = svm_model.predict(tfidf_filtered)
-                        recommended = filtered_games[filtered_games['Predicted'] == 1]
-                        recommended = recommended.sample(n=min(10, len(recommended)), random_state=42)
+                        recommended = filtered_games[filtered_games['Predicted'] == 1].sample(n=min(10, len(filtered_games)), random_state=42)
                         st.subheader(f"Rekomendasi Game berdasarkan kategori '{selected_cat}' dan validasi model untuk target '{TARGET_CAT}':")
                         for _, row in recommended.iterrows():
                             st.subheader(row['Name'])
@@ -147,7 +170,7 @@ if uploaded_zip is not None:
 
                 # Halaman Histori
                 elif page == "Histori":
-                    st.title("📜 Histori Rekomendasi")
+                    st.title("\U0001F4DC Histori Rekomendasi")
                     if st.session_state.history:
                         for waktu, tipe, nilai, hasil in reversed(st.session_state.history):
                             st.markdown(f"**{waktu.strftime('%Y-%m-%d %H:%M:%S')}** - Rekomendasi berdasarkan **{tipe}** '{nilai}':")
