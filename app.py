@@ -42,6 +42,8 @@ if uploaded_zip is not None:
                 with zip_ref.open('Dataset.csv') as csv_file:
                     df = pd.read_csv(csv_file)
 
+                df = df.drop_duplicates(subset='Name')
+
                 df['Genre'] = df['Genre'].fillna("").apply(lambda x: [i.strip() for i in x.split(",")])
                 df['Tags'] = df['Tags'].fillna("").apply(lambda x: [i.strip().strip('"') for i in x.split(",")])
                 df['Categories'] = df['Categories'].fillna("").apply(lambda x: [i.strip() for i in x.split(",")])
@@ -50,6 +52,7 @@ if uploaded_zip is not None:
                                           df['Tags'].apply(lambda x: ' '.join(x)) + ' ' + \
                                           df['Categories'].apply(lambda x: ' '.join(x))
 
+                df = df[df['combined_features'].str.strip() != '']
                 df_cleaned = df.copy()
 
                 st.sidebar.title("Dashboard")
@@ -60,28 +63,36 @@ if uploaded_zip is not None:
                 if page == "📘 Penjelasan Metode":
                     st.title("📘 Penjelasan Metode dan Algoritma")
                     st.markdown("""
-                    Aplikasi ini menggunakan pendekatan **Content-Based Filtering** untuk merekomendasikan game kepada pengguna. Beberapa langkah penting yang dilakukan antara lain:
+                    Aplikasi ini menggunakan pendekatan **Content-Based Filtering** untuk merekomendasikan game kepada pengguna. Sistem ini bekerja dengan menganalisis fitur-fitur dari game yang ada dan membandingkannya dengan preferensi pengguna berdasarkan genre, tag, atau kategori.
 
-                    ### 1. Preprocessing Data
-                    - Dataset game dari Steam diproses untuk menggabungkan informasi dari fitur **Genre**, **Tags**, dan **Categories**.
-                    - Nilai-nilai kosong diisi dan diubah menjadi format list agar mudah diproses.
+                    ### Langkah-langkah dalam Sistem Rekomendasi:
 
-                    ### 2. Ekstraksi Fitur
-                    - Data dikonversi menjadi representasi numerik menggunakan metode **TF-IDF (Term Frequency-Inverse Document Frequency)**.
-                    - TF-IDF membantu dalam merepresentasikan seberapa penting suatu kata (fitur) dalam kumpulan dokumen (deskripsi game).
+                    #### 1. Pengumpulan dan Persiapan Data
+                    - Data game dikumpulkan dari Kaggle dan disimpan dalam format CSV.
+                    - Fitur penting seperti **Genre**, **Tags**, dan **Categories** diolah untuk membentuk satu fitur gabungan yang disebut `combined_features`.
 
-                    ### 3. Standarisasi Fitur
-                    - Jika digunakan algoritma berbasis jarak seperti SVM atau KNN, data TF-IDF dapat didensifikasi dan distandarisasi agar memiliki skala yang seragam.
+                    #### 2. Preprocessing Teks
+                    - Dilakukan penghapusan data duplikat berdasarkan nama game untuk menjaga keunikan data.
+                    - Semua elemen digabung menjadi teks tunggal untuk ekstraksi fitur.
 
-                    ### 4. Klasifikasi dengan SVM
-                    - Algoritma **Support Vector Machine (SVM)** digunakan sebagai model klasifikasi untuk mengidentifikasi apakah suatu game sesuai untuk direkomendasikan berdasarkan fitur yang telah diekstraksi.
+                    #### 3. Ekstraksi Fitur dengan TF-IDF
+                    - TF-IDF (Term Frequency-Inverse Document Frequency) digunakan untuk mengubah teks `combined_features` menjadi bentuk vektor numerik.
+                    - Vektor ini menggambarkan pentingnya setiap kata dalam konteks keseluruhan data.
 
-                    ### 5. Rekomendasi
-                    - Berdasarkan input pengguna (genre, tag, atau kategori), sistem memfilter game dan memprediksi relevansinya menggunakan model SVM yang telah dilatih.
-                    - Game dengan prediksi positif ditampilkan sebagai rekomendasi.
+                    #### 4. Pelatihan Model dengan Support Vector Machine (SVM)
+                    - Model SVM dilatih menggunakan vektor TF-IDF untuk mempelajari pola dan menentukan apakah sebuah game bisa atau tidak untuk direkomendasikan.
+                    - Model dibuat terpisah untuk masing-masing fitur (genre, tag, kategori) agar lebih fokus.
 
-                    ### 6. Histori Interaksi
-                    - Setiap interaksi dan hasil rekomendasi dicatat dan dapat dilihat kembali oleh pengguna pada halaman histori.
+                    #### 5. Rekomendasi
+                    - Saat pengguna memilih genre/tag/kategori, sistem memfilter game yang sesuai.
+                    - Fitur gabungan dari game diformulasikan dan diprediksi menggunakan model SVM.
+                    - Hanya game yang diklasifikasi positif oleh model yang akan ditampilkan sebagai rekomendasi.
+
+                    #### 6. Pencatatan Histori
+                    - Semua hasil rekomendasi disimpan sebagai histori interaksi.
+                    - Pengguna bisa melihat histori ini kapan saja.
+
+                    Sistem ini berupaya memberikan rekomendasi yang akurat dengan menggabungkan teknik pengolahan teks dan pembelajaran mesin.
                     """)
 
                 elif page == "Beranda":
