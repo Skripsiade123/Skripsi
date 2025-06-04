@@ -91,13 +91,13 @@ def load_model_and_vectorizer(feature_type):
 
 # Streamlit App
 st.sidebar.title("Navigasi")
-pages = ["Penjelasan Metode", "Dashboard", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"]
+pages = ["Penjelasan Metode", "Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"]
 page = st.sidebar.radio("Pilih Halaman", pages)
 
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-if page == "Dashboard":
+if page == "Beranda":
     st.title("\U0001F3AE Sistem Rekomendasi Game")
 
     saved_history = load_saved_history()
