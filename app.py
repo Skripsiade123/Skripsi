@@ -1,42 +1,14 @@
 import streamlit as st
 import pandas as pd
 import pickle
-import numpy as np
-import os
-import zipfile
-import requests
 from sklearn.metrics.pairwise import linear_kernel
 
-# --- Unduh dan ekstrak dataset dari GitHub ---
-@st.cache_data
-def download_and_extract_zip(url, extract_to="dataset"):
-    os.makedirs(extract_to, exist_ok=True)
-    zip_path = os.path.join(extract_to, "Dataset.zip")
+# --- Load Dataset langsung dari GitHub ---
+CSV_URL = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset.csv"
 
-    # Download ZIP file jika belum ada
-    if not os.path.exists(zip_path):
-        response = requests.get(url)
-        with open(zip_path, "wb") as f:
-            f.write(response.content)
-
-    # Ekstrak hanya jika belum ada Dataset.csv
-    csv_path = os.path.join(extract_to, "Dataset.csv")
-    if not os.path.exists(csv_path):
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(extract_to)
-
-    return csv_path
-
-# Gunakan RAW link dari GitHub
-ZIP_URL = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"
-
-# Unduh & ekstrak otomatis
-csv_file_path = download_and_extract_zip(ZIP_URL)
-
-# --- Load Dataset ---
 @st.cache_data
 def load_data():
-    return pd.read_csv(csv_file_path)
+    return pd.read_csv(CSV_URL)
 
 df = load_data()
 
@@ -106,10 +78,16 @@ elif page == "Beranda":
     
     for _, row in recs.iterrows():
         st.markdown(f"### {row['Name']}")
-        st.image(row['Header Image'], width=300)
-        st.caption(row['Short Description'])
+        if 'Header Image' in row and pd.notna(row['Header Image']):
+            st.image(row['Header Image'], width=300)
+        if 'Short Description' in row and pd.notna(row['Short Description']):
+            st.caption(row['Short Description'])
         if st.button(f"Tambahkan ke histori - {row['Name']}"):
-            st.session_state.history.append(row['Genre'] + " " + str(row['Tags']) + " " + str(row['Categories']))
+            # Gabungkan fitur untuk histori input
+            genre = row['Genre'] if pd.notna(row['Genre']) else ""
+            tags = row['Tags'] if pd.notna(row['Tags']) else ""
+            categories = row['Categories'] if pd.notna(row['Categories']) else ""
+            st.session_state.history.append(f"{genre} {tags} {categories}".strip())
 
 elif page == "Rekomendasi Genre":
     st.title("Rekomendasi Berdasarkan Genre")
