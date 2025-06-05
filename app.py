@@ -10,63 +10,71 @@ import io
 import random
 
 # --- Konfigurasi Aplikasi ---
-# URL langsung ke file Dataset.zip di GitHub Anda
-DATASET_URL = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset.zip"
+# URL GitHub untuk unduhan otomatis (akan menjadi fallback jika tidak ada unggahan manual)
+# DATASET_URL = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset.zip" # Tidak lagi digunakan langsung
 # Direktori sementara untuk mengekstrak file dari ZIP
 DATA_DIR = "temp_data_extraction"
 os.makedirs(DATA_DIR, exist_ok=True) # Pastikan direktori ada
 
-# --- Fungsi untuk Mengunduh dan Mengekstrak Data ---
-# st.cache_data digunakan agar fungsi ini hanya berjalan sekali
-# kecuali input atau kode berubah, mempercepat aplikasi.
+# --- Fungsi untuk Mengekstrak Data dari ZIP (baik dari URL atau unggahan) ---
+# Fungsi ini sekarang akan menerima objek file (dari unggahan) atau BytesIO (dari unduhan URL)
 @st.cache_data
-def download_and_extract_data(url, extract_to_path):
-    st.info(f"Mengunduh data dari: {url}...")
+def extract_data_from_zip(zip_file_obj, extract_to_path):
+    st.info(f"Mengekstrak data dari file ZIP...")
     try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status() # Akan memunculkan error untuk status kode 4xx/5xx
-
-        # Menggunakan BytesIO untuk menangani konten zip di memori
-        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-            st.info(f"Daftar file di dalam Dataset.zip: {z.namelist()}")
+        with zipfile.ZipFile(zip_file_obj) as z:
+            st.info(f"Daftar file di dalam ZIP: {z.namelist()}")
             
-            # Cari file CSV di dalam ZIP
             csv_files_in_zip = [name for name in z.namelist() if name.lower().endswith('.csv')]
 
             if not csv_files_in_zip:
-                st.error("Tidak ada file CSV (.csv) yang ditemukan di dalam Dataset.zip. "
+                st.error("Tidak ada file CSV (.csv) yang ditemukan di dalam file ZIP. "
                          "Mohon pastikan ada file CSV di dalam zip Anda.")
                 return False, None
             
-            # Kita asumsikan file CSV pertama yang ditemukan adalah yang kita butuhkan.
-            # Jika ada lebih dari satu CSV dan Anda butuh yang spesifik, sesuaikan logika ini.
             csv_file_name_in_zip = csv_files_in_zip[0]
             
             st.info(f"Mengekstrak file: {csv_file_name_in_zip}...")
             z.extract(csv_file_name_in_zip, path=extract_to_path)
             
             extracted_csv_full_path = os.path.join(extract_to_path, csv_file_name_in_zip)
-            st.success(f"Data berhasil diunduh dan diekstrak ke: {extracted_csv_full_path}")
-            return True, extracted_csv_full_path # Mengembalikan jalur lengkap ke CSV yang diekstrak
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error saat mengunduh data dari GitHub: {e}. "
-                 "Mohon periksa koneksi internet Anda atau URL GitHub.")
-        return False, None
+            st.success(f"File CSV berhasil diekstrak ke: {extracted_csv_full_path}")
+            return True, extracted_csv_full_path
     except zipfile.BadZipFile:
-        st.error("File yang diunduh bukan file ZIP yang valid. Mohon periksa file Dataset.zip di GitHub.")
+        st.error("File yang diunggah/diunduh bukan file ZIP yang valid. Mohon periksa file ZIP Anda.")
         return False, None
     except Exception as e:
-        st.error(f"Terjadi kesalahan tak terduga saat ekstraksi: {e}")
+        st.error(f"Terjadi kesalahan saat ekstraksi: {e}")
         return False, None
 
 # --- Fungsi untuk Memuat dan Pra-proses Data Game ---
 @st.cache_data
-def load_and_preprocess_data():
-    # Panggil fungsi pengunduhan dan ekstraksi
-    success, csv_file_path = download_and_extract_data(DATASET_URL, DATA_DIR)
-    
+def load_and_preprocess_data(uploaded_file_obj=None):
+    csv_file_path = None
+
+    if uploaded_file_obj:
+        # Jika ada file yang diunggah manual
+        success, csv_file_path = extract_data_from_zip(uploaded_file_obj, DATA_DIR)
+    else:
+        # Jika tidak ada unggahan manual, coba unduh dari GitHub (fallback)
+        st.info("Tidak ada file ZIP yang diunggah. Mencoba mengunduh Dataset.zip dari GitHub sebagai gantinya.")
+        github_zip_url = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset.zip"
+        try:
+            response = requests.get(github_zip_url, stream=True)
+            response.raise_for_status()
+            zip_in_memory = io.BytesIO(response.content)
+            success, csv_file_path = extract_data_from_zip(zip_in_memory, DATA_DIR)
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error saat mengunduh Dataset.zip dari GitHub: {e}. "
+                     "Mohon periksa koneksi internet Anda atau URL GitHub.")
+            st.stop()
+        except Exception as e:
+            st.error(f"Terjadi kesalahan tak terduga saat mengunduh dari GitHub: {e}")
+            st.stop()
+
+
     if not success or csv_file_path is None:
-        st.stop() # Hentikan aplikasi jika gagal mengunduh atau mengekstrak
+        st.stop() # Hentikan aplikasi jika gagal mengunduh/ekstrak (baik manual maupun dari GitHub)
 
     try:
         df = pd.read_csv(csv_file_path)
@@ -77,10 +85,7 @@ def load_and_preprocess_data():
 
         st.info(f"Kolom yang ditemukan di dataset: {', '.join(df.columns)}")
 
-        # Daftar kolom yang WAJIB ada di dataset Anda
         required_columns = ['genres', 'tags', 'categories', 'description', 'name']
-        
-        # Periksa apakah semua kolom yang diperlukan ada
         missing_columns = [col for col in required_columns if col not in df.columns]
 
         if missing_columns:
@@ -95,58 +100,39 @@ def load_and_preprocess_data():
         st.stop()
     except Exception as e:
         st.error(f"Error saat memuat file CSV dari jalur diekstrak ({csv_file_path}): {e}. "
-                 "Mohon periksa format CSV atau nama kolom.")
+                 "Check if the CSV is well-formed or if column names are correct.")
         st.stop()
 
-    # Mengisi nilai NaN (Not a Number) dengan string kosong untuk kolom teks
-    # Ini mencegah error saat menggabungkan string jika ada nilai kosong
     df['genres'] = df['genres'].fillna('')
     df['tags'] = df['tags'].fillna('')
     df['categories'] = df['categories'].fillna('')
     df['description'] = df['description'].fillna('')
-    df['name'] = df['name'].fillna('Unknown Game') # Pastikan nama game tidak kosong
+    df['name'] = df['name'].fillna('Unknown Game')
 
-    # Menggabungkan semua fitur teks menjadi satu string untuk setiap game
-    # Ini adalah 'konten' yang akan dianalisis oleh TF-IDF
     df['combined_features'] = df['genres'] + ' ' + df['tags'] + ' ' + df['categories'] + ' ' + df['description']
 
-    # Inisialisasi TF-IDF Vectorizer
-    # stop_words='english' akan menghapus kata-kata umum dalam bahasa Inggris
     tfidf_vectorizer = TfidfVectorizer(stop_words='english')
-    # Fitur-fitur teks diubah menjadi matriks TF-IDF numerik
     tfidf_matrix = tfidf_vectorizer.fit_transform(df['combined_features'])
 
     return df, tfidf_matrix, tfidf_vectorizer
 
-# Memuat dan pra-proses data saat aplikasi dimulai
-df_games, tfidf_matrix_games, tfidf_vectorizer_games = load_and_preprocess_data()
-
-# --- Logika Filtering Berbasis Konten (Konsep SVM untuk Kesamaan) ---
-# Di sini, "konsep SVM" merujuk pada penggunaan ruang fitur yang dibangun (oleh TF-IDF)
-# untuk menemukan item serupa berdasarkan kedekatan dalam ruang tersebut,
-# diukur dengan Cosine Similarity. Bukan klasifikasi SVM.
+# --- Content-Based Filtering Logic (SVM concept for similarity) ---
 def get_recommendations_from_history(game_indices_history, top_n=10):
     if not game_indices_history:
-        return pd.DataFrame() # Mengembalikan DataFrame kosong jika riwayat kosong
+        return pd.DataFrame()
 
-    # Ambil rata-rata vektor TF-IDF dari game-game di riwayat pengguna
     history_vectors = tfidf_matrix_games[game_indices_history].mean(axis=0)
-    history_vectors = history_vectors.reshape(1, -1) # Pastikan berbentuk 2D untuk linear_kernel
+    history_vectors = history_vectors.reshape(1, -1)
 
-    # Hitung Cosine Similarity antara vektor riwayat dengan semua vektor game
     cosine_similarities = linear_kernel(history_vectors, tfidf_matrix_games).flatten()
 
-    # Urutkan game berdasarkan skor kesamaan
     sim_scores = list(enumerate(cosine_similarities))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
 
-    # Ambil N rekomendasi teratas, kecualikan game yang sudah ada di riwayat
     recommended_indices = []
-    # Kumpulan nama game di riwayat untuk menghindari rekomendasi ganda
     seen_names = set(df_games.iloc[st.session_state.history_indices]['name'].tolist()) if st.session_state.history_indices else set()
 
     for i, score in sim_scores:
-        # Pastikan game belum ada di riwayat dan bukan game yang sama (berdasarkan nama)
         if i not in game_indices_history and df_games.iloc[i]['name'] not in seen_names and len(recommended_indices) < top_n:
             recommended_indices.append(i)
         if len(recommended_indices) == top_n:
@@ -154,38 +140,56 @@ def get_recommendations_from_history(game_indices_history, top_n=10):
             
     return df_games.iloc[recommended_indices] if recommended_indices else pd.DataFrame()
 
-# Fungsi untuk mendapatkan rekomendasi berdasarkan genre, tag, atau kategori spesifik
+
 def get_recommendations_by_feature(feature_type, feature_value, top_n=10):
-    # Mencari game yang kolom fiturnya mengandung nilai yang dipilih (case-insensitive)
     filtered_games = df_games[df_games[feature_type].str.contains(feature_value, case=False, na=False, regex=False)]
-    
-    # Mengambil sampel acak dari game yang difilter (untuk variasi)
-    # random_state untuk hasil yang konsisten setiap kali aplikasi dijalankan
     return filtered_games.sample(min(top_n, len(filtered_games)), random_state=42) if not filtered_games.empty else pd.DataFrame()
 
 
-# --- Streamlit Session State untuk Riwayat Pengguna ---
-# Gunakan session state untuk menyimpan riwayat penjelajahan pengguna
-# agar data tetap ada saat berpindah halaman
+# --- Streamlit Session State for History ---
 if 'history' not in st.session_state:
-    st.session_state.history = [] # Menyimpan nama-nama game
+    st.session_state.history = []
 if 'history_indices' not in st.session_state:
-    st.session_state.history_indices = [] # Menyimpan indeks game di DataFrame
+    st.session_state.history_indices = []
 
-# Fungsi untuk menambahkan game ke riwayat
 def add_to_history(game_name, game_index):
-    if game_name not in st.session_state.history: # Hindari duplikasi
+    if game_name not in st.session_state.history:
         st.session_state.history.append(game_name)
         st.session_state.history_indices.append(game_index)
 
-# --- Halaman-halaman Aplikasi Streamlit ---
+# --- Fungsi untuk Menampilkan Input Unggahan Dataset ---
+def dataset_input_section():
+    st.sidebar.header("Pilih Sumber Dataset")
+    
+    uploaded_file = st.sidebar.file_uploader(
+        "Unggah file Dataset.zip Anda",
+        type=["zip"],
+        help="Silakan unggah file ZIP yang berisi dataset CSV game Anda."
+    )
+    
+    if uploaded_file is not None:
+        st.session_state['uploaded_dataset'] = uploaded_file
+        st.sidebar.success("File ZIP berhasil diunggah!")
+    else:
+        st.session_state['uploaded_dataset'] = None
+        st.sidebar.info("Tidak ada file ZIP diunggah. Aplikasi akan mencoba mengunduh dataset dari GitHub.")
+
+# Panggil fungsi input dataset di awal aplikasi
+dataset_input_section()
+
+# Memuat dan pra-proses data saat aplikasi dimulai, dengan mempertimbangkan unggahan
+# st.session_state['uploaded_dataset'] akan dilewatkan ke load_and_preprocess_data
+df_games, tfidf_matrix_games, tfidf_vectorizer_games = load_and_preprocess_data(st.session_state['uploaded_dataset'])
+
+
+# --- Streamlit Pages ---
 
 def page_explanation():
     st.title("Halaman Penjelasan Metode")
     st.header("Metode Rekomendasi Game")
 
     st.markdown("""
-    Aplikasi ini adalah sistem rekomendasi game yang dibuat menggunakan pendekatan **Content-Based Filtering**.
+    Aplikasi ini adalah sistem rekomendasi game yang dibuat menggunakan **Content-Based Filtering**.
     """)
 
     st.subheader("Apa itu Content-Based Filtering?")
@@ -202,9 +206,14 @@ def page_explanation():
         untuk mengevaluasi seberapa penting sebuah kata dalam sebuah dokumen relatif terhadap koleksi dokumen yang besar.
         Di sini, kami menggunakan TF-IDF untuk mengubah deskripsi game, genre, tag, dan kategori menjadi representasi numerik
         (disebut "vektor fitur"). Vektor ini secara efektif menangkap esensi konten setiap game.
-    * **SVM (Support Vector Machine)** biasanya adalah algoritma klasifikasi, dalam konteks ini,
+    * **Cosine Similarity (Konsep SVM untuk Kesamaan Fitur):** Setelah setiap game diwakili sebagai vektor TF-IDF,
+        kami menggunakan Cosine Similarity untuk mengukur tingkat kemiripan antara dua game atau antara
+        "profil preferensi" pengguna (yang dibuat dari gabungan vektor game yang telah dilihat pengguna) dengan semua game yang tersedia.
+        Semakin tinggi nilai Cosine Similarity, semakin mirip dua game atau game dengan preferensi pengguna.
+        Meskipun **SVM (Support Vector Machine)** biasanya adalah algoritma klasifikasi, dalam konteks ini,
         frasa "konsep SVM" merujuk pada prinsip dasar penggunaan ruang fitur yang dibangun (oleh TF-IDF) untuk menemukan item serupa
-        berdasarkan kedekatan mereka dalam ruang tersebut. Kami mengukur kemiripan antara vektor fitur, yang merupakan prinsip inti
+        berdasarkan kedekatan mereka dalam ruang tersebut, mirip dengan bagaimana SVM memisahkan kelas-kelas
+        dengan hyperplane optimal. Kami mengukur kemiripan antara vektor fitur, yang merupakan prinsip inti
         untuk menemukan item yang relevan dalam ruang dimensi tinggi.
 
     """)
@@ -235,7 +244,6 @@ def page_home():
                 st.markdown(f"Tags: {row['tags']}")
                 st.markdown(f"Categories: {row['categories']}")
                 if st.button(f"Lihat Detail {row['name']}", key=f"home_view_{row['name']}"):
-                    # Temukan indeks asli game di DataFrame utama untuk ditambahkan ke riwayat
                     original_index = df_games[df_games['name'] == row['name']].index[0]
                     add_to_history(row['name'], original_index)
                     st.toast(f"Ditambahkan ke riwayat: {row['name']}")
@@ -244,8 +252,7 @@ def page_home():
             st.info("Tidak ada rekomendasi baru berdasarkan riwayat Anda. Coba lihat beberapa game terlebih dahulu.")
     else:
         st.subheader("10 Game Populer/Acak (Untuk memulai)")
-        # Tampilkan 10 game acak jika riwayat kosong
-        random_games = df_games.sample(min(10, len(df_games)), random_state=42) # random_state agar konsisten
+        random_games = df_games.sample(min(10, len(df_games)), random_state=42)
         for i, row in random_games.iterrows():
             st.write(f"**{row['name']}**")
             st.markdown(f"Genre: {row['genres']}")
@@ -262,9 +269,9 @@ def page_genre_recommendation():
 
     all_genres = set()
     for genres_str in df_games['genres'].dropna():
-        for genre in genres_str.split(';'): # Asumsi genre dipisahkan oleh titik koma
+        for genre in genres_str.split(';'):
             stripped_genre = genre.strip()
-            if stripped_genre: # Hanya tambahkan genre yang tidak kosong
+            if stripped_genre:
                 all_genres.add(stripped_genre)
 
     sorted_genres = sorted(list(all_genres))
@@ -292,7 +299,7 @@ def page_tag_recommendation():
 
     all_tags = set()
     for tags_str in df_games['tags'].dropna():
-        for tag in tags_str.split(';'): # Asumsi tag dipisahkan oleh titik koma
+        for tag in tags_str.split(';'):
             stripped_tag = tag.strip()
             if stripped_tag:
                 all_tags.add(stripped_tag)
@@ -322,7 +329,7 @@ def page_category_recommendation():
 
     all_categories = set()
     for categories_str in df_games['categories'].dropna():
-        for category in categories_str.split(';'): # Asumsi kategori dipisahkan oleh titik koma
+        for category in categories_str.split(';'):
             stripped_category = category.strip()
             if stripped_category:
                 all_categories.add(stripped_category)
