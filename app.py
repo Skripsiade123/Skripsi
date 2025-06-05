@@ -9,15 +9,13 @@ import io
 DATASET_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/Dataset.zip?raw=true"
 SVM_GENRE_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/svm_model.pkl?raw=true"
 VECTORIZER_GENRE_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/tfidf_vectorizer.pkl?raw=true"
-
 SVM_TAG_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/svm_model_tags.pkl?raw=true"
 VECTORIZER_TAG_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/tfidf_vectorizer_tags.pkl?raw=true"
-
 SVM_CATEGORY_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/svm_model_categories.pkl?raw=true"
 VECTORIZER_CATEGORY_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/tfidf_vectorizer_categories.pkl?raw=true"
 
-# Fungsi untuk mengunduh dan membaca dataset dari ZIP
-@st.cache
+# Fungsi untuk mengunduh dataset dari ZIP
+@st.cache_data
 def load_data():
     response = requests.get(DATASET_URL)
     with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
@@ -25,7 +23,7 @@ def load_data():
     return pd.read_csv("data/Dataset.csv")
 
 # Fungsi untuk memuat model SVM dan vectorizer berdasarkan kategori
-@st.cache
+@st.cache_resource
 def load_models():
     def download_model(url, filename):
         response = requests.get(url)
@@ -97,4 +95,3 @@ elif page == "Histori":
 
     st.write("Berdasarkan histori pengguna, berikut rekomendasi tambahan:")
     st.dataframe(df.sample(10))  # Bisa dikembangkan lebih lanjut dengan model historis
-
