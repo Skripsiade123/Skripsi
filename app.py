@@ -43,29 +43,22 @@ df = load_data()
 # --- Load Models & Vectorizers ---
 @st.cache_resource
 def load_models():
-    with open("svm_model.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open("tfidf_vectorizer.pkl", "rb") as f:
-        vectorizer = pickle.load(f)
-    return model, vectorizer
+    models = {}
+    for model_name in ['svm', 'svm_categories', 'svm_tags']:
+        with open(f"{model_name}.pkl", "rb") as f:
+            models[model_name] = pickle.load(f)
+    return models
 
-def load_category_model():
-    with open("svm_model_categories.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open("tfidf_vectorizer_categories.pkl", "rb") as f:
-        vectorizer = pickle.load(f)
-    return model, vectorizer
+@st.cache_resource
+def load_vectorizers():
+    vectorizers = {}
+    for vectorizer_name in ['tfidf_vectorizer', 'tfidf_vectorizer_categories', 'tfidf_vectorizer_tags']:
+        with open(f"{vectorizer_name}.pkl", "rb") as f:
+            vectorizers[vectorizer_name] = pickle.load(f)
+    return vectorizers
 
-def load_tag_model():
-    with open("svm_model_tags.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open("tfidf_vectorizer_tags.pkl", "rb") as f:
-        vectorizer = pickle.load(f)
-    return model, vectorizer
-
-svm_model, tfidf_vectorizer = load_models()
-cat_model, cat_vectorizer = load_category_model()
-tag_model, tag_vectorizer = load_tag_model()
+models = load_models()
+vectorizers = load_vectorizers()
 
 # --- Setup Session State ---
 if "history" not in st.session_state:
@@ -106,10 +99,11 @@ elif page == "Beranda":
     if st.session_state.history:
         st.subheader("Berdasarkan histori Anda")
         combined_text = " ".join(st.session_state.history)
-        recs = recommend_by_input(combined_text, tfidf_vectorizer, svm_model)
+        recs = recommend_by_input(combined_text, vectorizers['tfidf_vectorizer'], models['svm'])
     else:
         st.subheader("10 Game Terpopuler")
         recs = df.sample(10)
+    
     for _, row in recs.iterrows():
         st.markdown(f"### {row['Name']}")
         st.image(row['Header Image'], width=300)
@@ -123,7 +117,7 @@ elif page == "Rekomendasi Genre":
     pilihan = st.multiselect("Pilih Genre:", all_genres)
     if pilihan:
         input_text = " ".join(pilihan)
-        recs = recommend_by_input(input_text, tfidf_vectorizer, svm_model)
+        recs = recommend_by_input(input_text, vectorizers['tfidf_vectorizer'], models['svm'])
         st.subheader("Rekomendasi:")
         st.write(recs[['Name', 'Genre']])
 
@@ -134,7 +128,7 @@ elif page == "Rekomendasi Tag":
     pilihan = st.multiselect("Pilih Tag:", flat_tags)
     if pilihan:
         input_text = " ".join(pilihan)
-        recs = recommend_by_input(input_text, tag_vectorizer, tag_model)
+        recs = recommend_by_input(input_text, vectorizers['tfidf_vectorizer_tags'], models['svm_tags'])
         st.subheader("Rekomendasi:")
         st.write(recs[['Name', 'Tags']])
 
@@ -145,7 +139,7 @@ elif page == "Rekomendasi Kategori":
     pilihan = st.multiselect("Pilih Kategori:", flat_cat)
     if pilihan:
         input_text = " ".join(pilihan)
-        recs = recommend_by_input(input_text, cat_vectorizer, cat_model)
+        recs = recommend_by_input(input_text, vectorizers['tfidf_vectorizer_categories'], models['svm_categories'])
         st.subheader("Rekomendasi:")
         st.write(recs[['Name', 'Categories']])
 
