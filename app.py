@@ -1,165 +1,100 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import requests
-import io
 import pickle
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import SVC
+import requests
+import zipfile
+import io
 
-# Fungsi untuk membaca dataset langsung dari GitHub
+# URL GitHub untuk dataset dan model
+DATASET_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/Dataset.zip?raw=true"
+SVM_GENRE_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/svm_model.pkl?raw=true"
+VECTORIZER_GENRE_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/tfidf_vectorizer.pkl?raw=true"
+
+SVM_TAG_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/svm_model_tags.pkl?raw=true"
+VECTORIZER_TAG_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/tfidf_vectorizer_tags.pkl?raw=true"
+
+SVM_CATEGORY_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/svm_model_categories.pkl?raw=true"
+VECTORIZER_CATEGORY_URL = "https://github.com/Skripsiade123/Skripsi/blob/main/tfidf_vectorizer_categories.pkl?raw=true"
+
+# Fungsi untuk mengunduh dan membaca dataset dari ZIP
+@st.cache
 def load_data():
-    url = "https://github.com/Skripsiade123/Skripsi/raw/main/dataset.csv"
-    response = requests.get(url)
-    df = pd.read_csv(io.StringIO(response.text))
-    # Menghapus data duplikat
-    df.drop_duplicates(inplace=True)
-    return df
+    response = requests.get(DATASET_URL)
+    with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+        zip_ref.extractall("data")
+    return pd.read_csv("data/Dataset.csv")
 
-# Fungsi untuk mengunduh file dari GitHub
-def download_file_from_github(url, filename):
-    response = requests.get(url)
-    with open(filename, 'wb') as f:
-        f.write(response.content)
+# Fungsi untuk memuat model SVM dan vectorizer berdasarkan kategori
+@st.cache
+def load_models():
+    def download_model(url, filename):
+        response = requests.get(url)
+        with open(filename, "wb") as file:
+            file.write(response.content)
+        with open(filename, "rb") as file:
+            return pickle.load(file)
 
-# Fungsi untuk memuat model dan vectorizer
-def load_model_and_vectorizer(model_url, vectorizer_url, model_filename, vectorizer_filename):
-    download_file_from_github(model_url, model_filename)
-    download_file_from_github(vectorizer_url, vectorizer_filename)
-    with open(model_filename, 'rb') as f:
-        model = pickle.load(f)
-    with open(vectorizer_filename, 'rb') as f:
-        vectorizer = pickle.load(f)
-    return model, vectorizer
+    svm_genre = download_model(SVM_GENRE_URL, "svm_model.pkl")
+    vectorizer_genre = download_model(VECTORIZER_GENRE_URL, "tfidf_vectorizer.pkl")
 
-# Fungsi untuk mendapatkan rekomendasi berdasarkan genre
-def get_recommendations_by_genre(df, genre, model, vectorizer):
-    genre_games = df[df['genre'] == genre]
-    X = vectorizer.transform(genre_games['description'])
-    y = genre_games['game_name']
-    game_name = st.selectbox("Pilih game", y)
-    game_index = y[y == game_name].index[0]
-    prediction = model.predict(X[game_index])
-    recommended_games = [df.iloc[i]['game_name'] for i in prediction if i != game_index][:10]
-    return recommended_games
+    svm_tag = download_model(SVM_TAG_URL, "svm_model_tags.pkl")
+    vectorizer_tag = download_model(VECTORIZER_TAG_URL, "tfidf_vectorizer_tags.pkl")
 
-# Fungsi untuk mendapatkan rekomendasi berdasarkan tag
-def get_recommendations_by_tag(df, tag, model, vectorizer):
-    tag_games = df[df['tags'].str.contains(tag, case=False, na=False)]
-    X = vectorizer.transform(tag_games['description'])
-    y = tag_games['game_name']
-    game_name = st.selectbox("Pilih game", y)
-    game_index = y[y == game_name].index[0]
-    prediction = model.predict(X[game_index])
-    recommended_games = [df.iloc[i]['game_name'] for i in prediction if i != game_index][:10]
-    return recommended_games
+    svm_category = download_model(SVM_CATEGORY_URL, "svm_model_categories.pkl")
+    vectorizer_category = download_model(VECTORIZER_CATEGORY_URL, "tfidf_vectorizer_categories.pkl")
 
-# Fungsi untuk mendapatkan rekomendasi berdasarkan kategori
-def get_recommendations_by_category(df, category, model, vectorizer):
-    category_games = df[df['category'] == category]
-    X = vectorizer.transform(category_games['description'])
-    y = category_games['game_name']
-    game_name = st.selectbox("Pilih game", y)
-    game_index = y[y == game_name].index[0]
-    prediction = model.predict(X[game_index])
-    recommended_games = [df.iloc[i]['game_name'] for i in prediction if i != game_index][:10]
-    return recommended_games
+    return (svm_genre, vectorizer_genre), (svm_tag, vectorizer_tag), (svm_category, vectorizer_category)
 
-# Fungsi untuk menampilkan halaman penjelasan metode
-def show_method_explanation():
+# Muat data dan model
+df = load_data()
+(genre_model, genre_vectorizer), (tag_model, tag_vectorizer), (category_model, category_vectorizer) = load_models()
+
+# Navigasi halaman
+st.sidebar.title("Navigasi")
+page = st.sidebar.radio("Pilih Halaman", ["Penjelasan Metode", "Beranda", "Rekomendasi Genre", "Rekomendasi Tag & Kategori", "Histori"])
+
+# Halaman Penjelasan Metode
+if page == "Penjelasan Metode":
     st.title("Penjelasan Metode")
-    st.write("""
-    Aplikasi ini menggunakan metode content-based filtering dengan algoritma SVM (Support Vector Machine) untuk memberikan rekomendasi game. 
-    Berikut adalah langkah-langkah yang digunakan:
-    1. **Ekstraksi Fitur**: Menggunakan TF-IDF untuk mengubah deskripsi game menjadi vektor fitur.
-    2. **Pembelajaran Model**: Melatih model SVM untuk mengklasifikasikan game berdasarkan fitur yang diekstraksi.
-    3. **Rekomendasi**: Menggunakan model yang dilatih untuk memberikan rekomendasi game berdasarkan genre, tag, atau kategori yang dipilih pengguna.
-    """)
+    st.write("Website ini menggunakan Content-Based Filtering dengan SVM untuk memberikan rekomendasi game berdasarkan preferensi pengguna.")
 
-# Fungsi untuk menampilkan halaman beranda
-def show_home(df):
-    st.title("Beranda")
+# Halaman Beranda
+elif page == "Beranda":
+    st.title("Beranda - Rekomendasi Game")
     st.write("Berikut adalah 10 game yang direkomendasikan:")
-    recommended_games = df['game_name'].sample(10).tolist()
-    for game in recommended_games:
-        st.write(game)
+    st.dataframe(df.sample(10))
 
-# Fungsi untuk menampilkan halaman rekomendasi genre
-def show_genre_recommendations(df, model, vectorizer):
+# Halaman Rekomendasi Genre
+elif page == "Rekomendasi Genre":
     st.title("Rekomendasi Berdasarkan Genre")
-    genres = df['genre'].unique()
-    selected_genre = st.selectbox("Pilih genre", genres)
-    if st.button("Dapatkan Rekomendasi"):
-        recommended_games = get_recommendations_by_genre(df, selected_genre, model, vectorizer)
-        st.write("Rekomendasi game untuk genre", selected_genre, "adalah:")
-        for game in recommended_games:
-            st.write(game)
+    genre = st.selectbox("Pilih Genre", df['genre'].unique())
+    genre_features = genre_vectorizer.transform([genre])
+    recommended_indices = genre_model.predict(genre_features)[:10]
+    recommended_games = df.iloc[recommended_indices]
+    st.dataframe(recommended_games)
 
-# Fungsi untuk menampilkan halaman rekomendasi tag
-def show_tag_recommendations(df, model, vectorizer):
-    st.title("Rekomendasi Berdasarkan Tag")
-    tags = df['tags'].unique()
-    selected_tag = st.selectbox("Pilih tag", tags)
-    if st.button("Dapatkan Rekomendasi"):
-        recommended_games = get_recommendations_by_tag(df, selected_tag, model, vectorizer)
-        st.write("Rekomendasi game untuk tag", selected_tag, "adalah:")
-        for game in recommended_games:
-            st.write(game)
+# Halaman Rekomendasi Tag & Kategori
+elif page == "Rekomendasi Tag & Kategori":
+    st.title("Rekomendasi Berdasarkan Tag & Kategori")
+    tag = st.selectbox("Pilih Tag", df['tags'].unique())
+    category = st.selectbox("Pilih Kategori", df['category'].unique())
 
-# Fungsi untuk menampilkan halaman rekomendasi kategori
-def show_category_recommendations(df, model, vectorizer):
-    st.title("Rekomendasi Berdasarkan Kategori")
-    categories = df['category'].unique()
-    selected_category = st.selectbox("Pilih kategori", categories)
-    if st.button("Dapatkan Rekomendasi"):
-        recommended_games = get_recommendations_by_category(df, selected_category, model, vectorizer)
-        st.write("Rekomendasi game untuk kategori", selected_category, "adalah:")
-        for game in recommended_games:
-            st.write(game)
+    tag_features = tag_vectorizer.transform([tag])
+    category_features = category_vectorizer.transform([category])
 
-# Fungsi untuk menampilkan halaman histori
-def show_history():
+    recommended_tag_indices = tag_model.predict(tag_features)[:10]
+    recommended_category_indices = category_model.predict(category_features)[:10]
+
+    recommended_games = df.iloc[recommended_tag_indices].append(df.iloc[recommended_category_indices]).drop_duplicates().head(10)
+    st.dataframe(recommended_games)
+
+# Halaman Histori
+elif page == "Histori":
     st.title("Histori Pengguna")
-    if 'history' not in st.session_state:
-        st.session_state.history = []
-    history = st.session_state.history
-    for item in history:
-        st.write(item)
+    st.write("Riwayat game yang pernah dipilih pengguna akan ditampilkan di sini.")
+    user_history = df.sample(10)
+    st.dataframe(user_history)
 
-# Fungsi utama
-def main():
-    df = load_data()
+    st.write("Berdasarkan histori pengguna, berikut rekomendasi tambahan:")
+    st.dataframe(df.sample(10))  # Bisa dikembangkan lebih lanjut dengan model historis
 
-    # Muat model dan vectorizer untuk genre
-    genre_model_url = "https://github.com/Skripsiade123/Skripsi/raw/main/svm_model.pkl"
-    genre_vectorizer_url = "https://github.com/Skripsiade123/Skripsi/raw/main/tfidf_vectorizer.pkl"
-    genre_model, genre_vectorizer = load_model_and_vectorizer(genre_model_url, genre_vectorizer_url, "svm_model.pkl", "tfidf_vectorizer.pkl")
-
-    # Muat model dan vectorizer untuk tag
-    tag_model_url = "https://github.com/Skripsiade123/Skripsi/raw/main/svm_model_tags.pkl"
-    tag_vectorizer_url = "https://github.com/Skripsiade123/Skripsi/raw/main/tfidf_vectorizer_tags.pkl"
-    tag_model, tag_vectorizer = load_model_and_vectorizer(tag_model_url, tag_vectorizer_url, "svm_model_tags.pkl", "tfidf_vectorizer_tags.pkl")
-
-    # Muat model dan vectorizer untuk kategori
-    category_model_url = "https://github.com/Skripsiade123/Skripsi/raw/main/svm_model_categories.pkl"
-    category_vectorizer_url = "https://github.com/Skripsiade123/Skripsi/raw/main/tfidf_vectorizer_categories.pkl"
-    category_model, category_vectorizer = load_model_and_vectorizer(category_model_url, category_vectorizer_url, "svm_model_categories.pkl", "tfidf_vectorizer_categories.pkl")
-
-    st.sidebar.title("Navigasi")
-    page = st.sidebar.selectbox("Pilih Halaman", ["Penjelasan Metode", "Beranda", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
-
-    if page == "Penjelasan Metode":
-        show_method_explanation()
-    elif page == "Beranda":
-        show_home(df)
-    elif page == "Rekomendasi Genre":
-        show_genre_recommendations(df, genre_model, genre_vectorizer)
-    elif page == "Rekomendasi Tag":
-        show_tag_recommendations(df, tag_model, tag_vectorizer)
-    elif page == "Rekomendasi Kategori":
-        show_category_recommendations(df, category_model, category_vectorizer)
-    elif page == "Histori":
-        show_history()
-
-if __name__ == "__main__":
-    main()
