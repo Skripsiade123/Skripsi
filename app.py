@@ -1,20 +1,20 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 import requests
-import zipfile
 import io
-import os
 import pickle
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.svm import SVC
 
-# Fungsi untuk mengunduh dan membaca dataset dari GitHub
+# Fungsi untuk membaca dataset langsung dari GitHub
 def load_data():
-    url = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"
+    url = "https://github.com/Skripsiade123/Skripsi/raw/main/dataset.csv"
     response = requests.get(url)
-    with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-        z.extractall()
-    return pd.read_csv('Dataset.csv')
+    df = pd.read_csv(io.StringIO(response.text))
+    # Menghapus data duplikat
+    df.drop_duplicates(inplace=True)
+    return df
 
 # Fungsi untuk mengunduh file dari GitHub
 def download_file_from_github(url, filename):
@@ -39,10 +39,8 @@ def get_recommendations_by_genre(df, genre, model, vectorizer):
     y = genre_games['game_name']
     game_name = st.selectbox("Pilih game", y)
     game_index = y[y == game_name].index[0]
-    similarity_scores = cosine_similarity(X[game_index], X)
-    similar_games = list(enumerate(similarity_scores[0]))
-    sorted_similar_games = sorted(similar_games, key=lambda x: x[1], reverse=True)[1:11]
-    recommended_games = [df.iloc[i[0]]['game_name'] for i in sorted_similar_games]
+    prediction = model.predict(X[game_index])
+    recommended_games = [df.iloc[i]['game_name'] for i in prediction if i != game_index][:10]
     return recommended_games
 
 # Fungsi untuk mendapatkan rekomendasi berdasarkan tag
@@ -52,10 +50,8 @@ def get_recommendations_by_tag(df, tag, model, vectorizer):
     y = tag_games['game_name']
     game_name = st.selectbox("Pilih game", y)
     game_index = y[y == game_name].index[0]
-    similarity_scores = cosine_similarity(X[game_index], X)
-    similar_games = list(enumerate(similarity_scores[0]))
-    sorted_similar_games = sorted(similar_games, key=lambda x: x[1], reverse=True)[1:11]
-    recommended_games = [df.iloc[i[0]]['game_name'] for i in sorted_similar_games]
+    prediction = model.predict(X[game_index])
+    recommended_games = [df.iloc[i]['game_name'] for i in prediction if i != game_index][:10]
     return recommended_games
 
 # Fungsi untuk mendapatkan rekomendasi berdasarkan kategori
@@ -65,10 +61,8 @@ def get_recommendations_by_category(df, category, model, vectorizer):
     y = category_games['game_name']
     game_name = st.selectbox("Pilih game", y)
     game_index = y[y == game_name].index[0]
-    similarity_scores = cosine_similarity(X[game_index], X)
-    similar_games = list(enumerate(similarity_scores[0]))
-    sorted_similar_games = sorted(similar_games, key=lambda x: x[1], reverse=True)[1:11]
-    recommended_games = [df.iloc[i[0]]['game_name'] for i in sorted_similar_games]
+    prediction = model.predict(X[game_index])
+    recommended_games = [df.iloc[i]['game_name'] for i in prediction if i != game_index][:10]
     return recommended_games
 
 # Fungsi untuk menampilkan halaman penjelasan metode
