@@ -3,58 +3,25 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
-import zipfile
-import os
-import requests
-import io
 import random
 
 # --- Configuration ---
-DATASET_URL = "https://github.com/Skripsiade123/Skripsi/raw/main/Dataset.zip"
-# Assuming 'training data' is just for specific model training if applicable,
-# but for a content-based system, the main dataset is usually sufficient for feature extraction.
-# If 'training data' contains specific user-item interactions or labels for SVM classification,
-# please clarify its structure. For now, we'll focus on the main Dataset.zip.
-
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
-
-@st.cache_data
-def download_and_extract_data(url, extract_to):
-    st.write(f"Downloading data from {url}...")
-    try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
-
-        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-            z.extractall(extract_to)
-        st.success("Data downloaded and extracted successfully!")
-        return True
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error downloading data: {e}")
-        return False
-    except zipfile.BadZipFile:
-        st.error("Downloaded file is not a valid zip file.")
-        return False
+# Assuming the CSV file inside your Dataset.zip is named 'games.csv'
+# and it's hosted in a way that provides a raw URL.
+# You might need to adjust this URL if the CSV inside the zip has a different path or name
+# or if your GitHub repository structure changes.
+DATASET_RAW_URL = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset/games.csv"
 
 # --- Data Loading and Preprocessing ---
 @st.cache_data
 def load_and_preprocess_data():
-    if not download_and_extract_data(DATASET_URL, DATA_DIR):
-        st.stop() # Stop if data extraction fails
-
-    # Find the CSV file within the extracted directory
-    csv_files = [f for f in os.listdir(DATA_DIR) if f.endswith('.csv')]
-    if not csv_files:
-        st.error("No CSV file found in the extracted dataset.")
-        st.stop()
-
+    st.write(f"Loading data from {DATASET_RAW_URL}...")
     try:
-        df = pd.read_csv(os.path.join(DATA_DIR, csv_files[0]))
-        st.write(f"Loaded {len(df)} games from {csv_files[0]}")
+        df = pd.read_csv(DATASET_RAW_URL)
+        st.success(f"Loaded {len(df)} games directly from GitHub!")
     except Exception as e:
-        st.error(f"Error loading CSV file: {e}")
-        st.stop()
+        st.error(f"Error loading data from URL: {e}. Make sure the URL is correct and the CSV is publicly accessible.")
+        st.stop() # Stop the app if data loading fails
 
     # Fill NaN values in relevant columns with empty strings
     df['genres'] = df['genres'].fillna('')
@@ -75,23 +42,16 @@ def load_and_preprocess_data():
 df_games, tfidf_matrix_games, tfidf_vectorizer_games = load_and_preprocess_data()
 
 # --- Content-Based Filtering Logic (SVM concept for similarity) ---
-# For content-based filtering, we use the cosine similarity of TF-IDF vectors.
-# The 'SVM concept' here is more about using the features to find similar items
-# in the feature space, rather than a classification model. If you intend to use
-# an actual SVM classifier for user preferences (e.g., given a user's past likes/dislikes),
-# you would need a dataset with user-item interaction labels.
-# For this content-based approach, linear_kernel (cosine similarity) is very common
-# and effective with TF-IDF.
-
 def get_recommendations_from_history(game_indices_history, top_n=10):
     if not game_indices_history:
         return []
 
     # Get the average TF-IDF vector for the games in history
+    # Ensure history_vectors is a 2D array for linear_kernel
     history_vectors = tfidf_matrix_games[game_indices_history].mean(axis=0)
+    history_vectors = history_vectors.reshape(1, -1) # Reshape to (1, n_features)
 
     # Calculate cosine similarity between the history vector and all game vectors
-    # Reshape history_vectors to be a 2D array for linear_kernel
     cosine_similarities = linear_kernel(history_vectors, tfidf_matrix_games).flatten()
 
     # Sort games by similarity score
@@ -100,17 +60,19 @@ def get_recommendations_from_history(game_indices_history, top_n=10):
 
     # Exclude games already in history and get the top N recommendations
     recommended_indices = []
+    seen_names = set(df_games.iloc[st.session_state.history_indices]['name']) # Track names to avoid recommending same game
     for i, score in sim_scores:
-        if i not in game_indices_history and len(recommended_indices) < top_n:
+        if i not in game_indices_history and df_games.iloc[i]['name'] not in seen_names and len(recommended_indices) < top_n:
             recommended_indices.append(i)
         if len(recommended_indices) == top_n:
             break
-
     return df_games.iloc[recommended_indices]
 
+
 def get_recommendations_by_feature(feature_type, feature_value, top_n=10):
-    filtered_games = df_games[df_games[feature_type].str.contains(feature_value, case=False, na=False)]
-    return filtered_games.sample(min(top_n, len(filtered_games))) if not filtered_games.empty else pd.DataFrame()
+    # Use .str.contains with regex=False for simple substring matching
+    filtered_games = df_games[df_games[feature_type].str.contains(feature_value, case=False, na=False, regex=False)]
+    return filtered_games.sample(min(top_n, len(filtered_games)), random_state=42) if not filtered_games.empty else pd.DataFrame()
 
 
 # --- Streamlit Session State for History ---
@@ -120,6 +82,7 @@ if 'history_indices' not in st.session_state:
     st.session_state.history_indices = [] # Stores game DataFrame indices
 
 def add_to_history(game_name, game_index):
+    # Ensure no duplicates in history
     if game_name not in st.session_state.history:
         st.session_state.history.append(game_name)
         st.session_state.history_indices.append(game_index)
@@ -187,7 +150,9 @@ def page_home():
                 st.markdown(f"Tags: {row['tags']}")
                 st.markdown(f"Categories: {row['categories']}")
                 if st.button(f"Lihat Detail {row['name']}", key=f"home_view_{row['name']}"):
-                    add_to_history(row['name'], df_games[df_games['name'] == row['name']].index[0])
+                    # Find the exact index in the original DataFrame to add to history_indices
+                    original_index = df_games[df_games['name'] == row['name']].index[0]
+                    add_to_history(row['name'], original_index)
                     st.toast(f"Ditambahkan ke riwayat: {row['name']}")
                 st.markdown("---")
         else:
@@ -195,14 +160,15 @@ def page_home():
     else:
         st.subheader("10 Game Populer/Acak (Untuk memulai)")
         # Display 10 random games if no history
-        random_games = df_games.sample(min(10, len(df_games)))
+        random_games = df_games.sample(min(10, len(df_games)), random_state=42) # Use random_state for consistent random games
         for i, row in random_games.iterrows():
             st.write(f"**{row['name']}**")
             st.markdown(f"Genre: {row['genres']}")
             st.markdown(f"Tags: {row['tags']}")
             st.markdown(f"Categories: {row['categories']}")
             if st.button(f"Lihat Detail {row['name']}", key=f"initial_view_{row['name']}"):
-                add_to_history(row['name'], df_games[df_games['name'] == row['name']].index[0])
+                original_index = df_games[df_games['name'] == row['name']].index[0]
+                add_to_history(row['name'], original_index)
                 st.toast(f"Ditambahkan ke riwayat: {row['name']}")
             st.markdown("---")
 
@@ -227,7 +193,8 @@ def page_genre_recommendation():
                 st.markdown(f"Tags: {row['tags']}")
                 st.markdown(f"Categories: {row['categories']}")
                 if st.button(f"Lihat Detail {row['name']}", key=f"genre_view_{row['name']}"):
-                    add_to_history(row['name'], df_games[df_games['name'] == row['name']].index[0])
+                    original_index = df_games[df_games['name'] == row['name']].index[0]
+                    add_to_history(row['name'], original_index)
                     st.toast(f"Ditambahkan ke riwayat: {row['name']}")
                 st.markdown("---")
         else:
@@ -254,7 +221,8 @@ def page_tag_recommendation():
                 st.markdown(f"Tags: {row['tags']}")
                 st.markdown(f"Categories: {row['categories']}")
                 if st.button(f"Lihat Detail {row['name']}", key=f"tag_view_{row['name']}"):
-                    add_to_history(row['name'], df_games[df_games['name'] == row['name']].index[0])
+                    original_index = df_games[df_games['name'] == row['name']].index[0]
+                    add_to_history(row['name'], original_index)
                     st.toast(f"Ditambahkan ke riwayat: {row['name']}")
                 st.markdown("---")
         else:
@@ -281,7 +249,8 @@ def page_category_recommendation():
                 st.markdown(f"Tags: {row['tags']}")
                 st.markdown(f"Categories: {row['categories']}")
                 if st.button(f"Lihat Detail {row['name']}", key=f"category_view_{row['name']}"):
-                    add_to_history(row['name'], df_games[df_games['name'] == row['name']].index[0])
+                    original_index = df_games[df_games['name'] == row['name']].index[0]
+                    add_to_history(row['name'], original_index)
                     st.toast(f"Ditambahkan ke riwayat: {row['name']}")
                 st.markdown("---")
         else:
