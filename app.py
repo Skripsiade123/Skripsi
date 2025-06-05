@@ -3,25 +3,65 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+import zipfile
+import os
+import requests
+import io
 import random
 
 # --- Configuration ---
-# Assuming the CSV file inside your Dataset.zip is named 'games.csv'
-# and it's hosted in a way that provides a raw URL.
-# You might need to adjust this URL if the CSV inside the zip has a different path or name
-# or if your GitHub repository structure changes.
-DATASET_RAW_URL = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset/games.csv"
+DATASET_URL = "https://raw.githubusercontent.com/Skripsiade123/Skripsi/main/Dataset.zip"
+DATA_DIR = "temp_data" # Use a temporary directory for extraction
+os.makedirs(DATA_DIR, exist_ok=True)
+
+@st.cache_data
+def download_and_extract_data(url, extract_to):
+    st.write(f"Downloading data from {url}...")
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
+
+        # Use BytesIO to handle the zip content in memory
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            # Print contents of the zip file for debugging
+            st.info(f"Contents of the zip file: {z.namelist()}")
+            # Assuming there's only one CSV or the relevant CSV is easily identifiable
+            csv_files_in_zip = [name for name in z.namelist() if name.endswith('.csv')]
+
+            if not csv_files_in_zip:
+                st.error("No CSV file found inside the zip file.")
+                return False, None
+            
+            # For simplicity, let's assume the first found CSV is the one we need.
+            # If your zip contains multiple CSVs, you might need a more specific logic.
+            csv_file_name_in_zip = csv_files_in_zip[0]
+            
+            z.extract(csv_file_name_in_zip, path=extract_to)
+            st.success(f"Data downloaded and extracted successfully to {os.path.join(extract_to, csv_file_name_in_zip)}!")
+            return True, os.path.join(extract_to, csv_file_name_in_zip) # Return full path to the extracted CSV
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error downloading data: {e}")
+        return False, None
+    except zipfile.BadZipFile:
+        st.error("Downloaded file is not a valid zip file.")
+        return False, None
+    except Exception as e:
+        st.error(f"An unexpected error occurred during extraction: {e}")
+        return False, None
 
 # --- Data Loading and Preprocessing ---
 @st.cache_data
 def load_and_preprocess_data():
-    st.write(f"Loading data from {DATASET_RAW_URL}...")
+    success, csv_path = download_and_extract_data(DATASET_URL, DATA_DIR)
+    if not success or csv_path is None:
+        st.stop() # Stop if data extraction fails
+
     try:
-        df = pd.read_csv(DATASET_RAW_URL)
-        st.success(f"Loaded {len(df)} games directly from GitHub!")
+        df = pd.read_csv(csv_path)
+        st.write(f"Loaded {len(df)} games from {csv_path}")
     except Exception as e:
-        st.error(f"Error loading data from URL: {e}. Make sure the URL is correct and the CSV is publicly accessible.")
-        st.stop() # Stop the app if data loading fails
+        st.error(f"Error loading CSV file from extracted path ({csv_path}): {e}")
+        st.stop()
 
     # Fill NaN values in relevant columns with empty strings
     df['genres'] = df['genres'].fillna('')
@@ -44,10 +84,9 @@ df_games, tfidf_matrix_games, tfidf_vectorizer_games = load_and_preprocess_data(
 # --- Content-Based Filtering Logic (SVM concept for similarity) ---
 def get_recommendations_from_history(game_indices_history, top_n=10):
     if not game_indices_history:
-        return []
+        return pd.DataFrame() # Return empty DataFrame if no history
 
     # Get the average TF-IDF vector for the games in history
-    # Ensure history_vectors is a 2D array for linear_kernel
     history_vectors = tfidf_matrix_games[game_indices_history].mean(axis=0)
     history_vectors = history_vectors.reshape(1, -1) # Reshape to (1, n_features)
 
@@ -60,17 +99,19 @@ def get_recommendations_from_history(game_indices_history, top_n=10):
 
     # Exclude games already in history and get the top N recommendations
     recommended_indices = []
-    seen_names = set(df_games.iloc[st.session_state.history_indices]['name']) # Track names to avoid recommending same game
+    # Using a set for faster lookup of already seen game names
+    seen_names = set(df_games.iloc[st.session_state.history_indices]['name'].tolist()) if st.session_state.history_indices else set()
+
     for i, score in sim_scores:
         if i not in game_indices_history and df_games.iloc[i]['name'] not in seen_names and len(recommended_indices) < top_n:
             recommended_indices.append(i)
         if len(recommended_indices) == top_n:
             break
-    return df_games.iloc[recommended_indices]
+            
+    return df_games.iloc[recommended_indices] if recommended_indices else pd.DataFrame()
 
 
 def get_recommendations_by_feature(feature_type, feature_value, top_n=10):
-    # Use .str.contains with regex=False for simple substring matching
     filtered_games = df_games[df_games[feature_type].str.contains(feature_value, case=False, na=False, regex=False)]
     return filtered_games.sample(min(top_n, len(filtered_games)), random_state=42) if not filtered_games.empty else pd.DataFrame()
 
@@ -176,15 +217,20 @@ def page_genre_recommendation():
     st.title("Rekomendasi Berdasarkan Genre")
 
     all_genres = set()
+    # Ensure to handle potential empty strings from fillna()
     for genres_str in df_games['genres'].dropna():
-        for genre in genres_str.split(';'): # Assuming genres are separated by semicolons
-            all_genres.add(genre.strip())
+        # Split by ';' and handle multiple spaces or empty strings after split
+        for genre in genres_str.split(';'):
+            stripped_genre = genre.strip()
+            if stripped_genre: # Add only non-empty genres
+                all_genres.add(stripped_genre)
 
     sorted_genres = sorted(list(all_genres))
     selected_genre = st.selectbox("Pilih Genre", [""] + sorted_genres)
 
     if selected_genre:
         st.subheader(f"10 Game dalam Genre: {selected_genre}")
+        # Make sure to use regex=False if split by literal ';'
         recommended_games = get_recommendations_by_feature('genres', selected_genre, top_n=10)
         if not recommended_games.empty:
             for i, row in recommended_games.iterrows():
@@ -205,8 +251,10 @@ def page_tag_recommendation():
 
     all_tags = set()
     for tags_str in df_games['tags'].dropna():
-        for tag in tags_str.split(';'): # Assuming tags are separated by semicolons
-            all_tags.add(tag.strip())
+        for tag in tags_str.split(';'):
+            stripped_tag = tag.strip()
+            if stripped_tag:
+                all_tags.add(stripped_tag)
 
     sorted_tags = sorted(list(all_tags))
     selected_tag = st.selectbox("Pilih Tag", [""] + sorted_tags)
@@ -233,8 +281,10 @@ def page_category_recommendation():
 
     all_categories = set()
     for categories_str in df_games['categories'].dropna():
-        for category in categories_str.split(';'): # Assuming categories are separated by semicolons
-            all_categories.add(category.strip())
+        for category in categories_str.split(';'):
+            stripped_category = category.strip()
+            if stripped_category:
+                all_categories.add(stripped_category)
 
     sorted_categories = sorted(list(all_categories))
     selected_category = st.selectbox("Pilih Kategori", [""] + sorted_categories)
