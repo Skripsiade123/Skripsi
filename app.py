@@ -8,7 +8,7 @@ import joblib
 def load_data():
     with zipfile.ZipFile("Dataset.zip", 'r') as zip_ref:
         zip_ref.extractall("data")
-    df = pd.read_csv("data/games.csv")
+    df = pd.read_csv("data/Dataset.csv")
     return df
 
 df = load_data()
