@@ -30,10 +30,10 @@ def load_data():
     for root, dirs, files in os.walk(data_dir):
         for file in files:
             # Look for a CSV file that likely contains the dataset
-            # We'll be flexible with filename but prioritize 'dataset' in name
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
                     df = pd.read_csv(os.path.join(root, file))
+                    # Convert all column names to lowercase to ensure consistency
                     df.columns = df.columns.str.strip().str.lower()
                     csv_found = True
                     st.sidebar.success(f"Dataset '{file}' loaded successfully.")
@@ -60,15 +60,19 @@ def load_data():
             st.sidebar.warning("No 'name' column found for duplicate removal. Skipping deduplication.")
 
         # 2. Handle Missing Descriptions
+        # Check for 'deskripsi' first, then 'description'
         if 'deskripsi' in df.columns:
             df['deskripsi'] = df['deskripsi'].fillna('Deskripsi tidak tersedia.')
-        elif 'description' in df.columns: # Fallback to 'description'
+        elif 'description' in df.columns:
             df['description'] = df['description'].fillna('Deskripsi tidak tersedia.')
         else:
             st.sidebar.warning("Neither 'deskripsi' nor 'description' column found. Game descriptions might be missing.")
 
         # 3. Handle Missing Genres, Tags, Categories, and Images
-        for col in ['genre', 'tag', 'category', 'img']:
+        # Ensure 'genre', 'tags', 'categories', 'img' (all lowercase) exist and are handled
+        # The .str.lower() above already handles the capitalization from source.
+        # Here we just ensure they exist and fill NaN.
+        for col in ['genre', 'tags', 'categories', 'img']: # Use 'tags' and 'categories' consistently here
             if col in df.columns:
                 df[col] = df[col].fillna('') # Fill NaN with empty string
             else:
@@ -87,8 +91,8 @@ df = load_data()
 # Ensure these files exist or handle their absence gracefully
 try:
     model_genre = joblib.load("svm_model.pkl")
-    model_tag = joblib.load("svm_model_tags.pkl")
-    model_category = joblib.load("svm_model_categories.pkl")
+    model_tag = joblib.load("svm_model_tags.pkl") # Assuming this model maps to 'tags'
+    model_category = joblib.load("svm_model_categories.pkl") # Assuming this model maps to 'categories'
     st.sidebar.success("SVM Models loaded successfully.")
 except FileNotFoundError:
     st.error("Model files (svm_model.pkl, svm_model_tags.pkl, svm_model_categories.pkl) not found. Please ensure they are in the same directory.")
@@ -119,12 +123,12 @@ def rekomendasi_berdasarkan_histori():
         if preferensi_genre and 'genre' in df_temp.columns:
             for pref_g in preferensi_genre:
                 df_temp.loc[df_temp["genre"].str.contains(pref_g, case=False, na=False), "score"] += 3
-        if preferensi_tag and 'tag' in df_temp.columns:
+        if preferensi_tag and 'tags' in df_temp.columns: # Use 'tags' here
             for pref_t in preferensi_tag:
-                df_temp.loc[df_temp["tag"].str.contains(pref_t, case=False, na=False), "score"] += 2
-        if preferensi_kat and 'category' in df_temp.columns:
+                df_temp.loc[df_temp["tags"].str.contains(pref_t, case=False, na=False), "score"] += 2
+        if preferensi_kat and 'categories' in df_temp.columns: # Use 'categories' here
             for pref_k in preferensi_kat:
-                df_temp.loc[df_temp["category"].str.contains(pref_k, case=False, na=False), "score"] += 1
+                df_temp.loc[df_temp["categories"].str.contains(pref_k, case=False, na=False), "score"] += 1
 
         hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
         return hasil.head(10)
@@ -149,11 +153,11 @@ def tampilkan_game(hasil):
         if not deskripsi: # If it's empty after stripping
             deskripsi = 'Deskripsi tidak tersedia.'
 
-        # Process genre, tag, category to display them separately
+        # Process genre, tags, categories to display them separately
         # Ensure these columns exist and are treated as strings before splitting
         genre_str = str(row.get('genre', '')).strip()
-        tag_str = str(row.get('tag', '')).strip()
-        kategori_str = str(row.get('category', '')).strip()
+        tag_str = str(row.get('tags', '')).strip() # Use 'tags' here
+        kategori_str = str(row.get('categories', '')).strip() # Use 'categories' here
 
         # Split and join with <br> for separate lines, filter out empty strings
         genres_formatted = "<br>".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
@@ -222,7 +226,7 @@ elif halaman == "Rekomendasi Genre":
     all_genres = set()
     if 'genre' in df.columns:
         for genres_str in df['genre'].dropna().unique():
-            for g in str(genres_str).split(','): # Ensure string conversion
+            for g in str(genres_str).split(','):
                 all_genres.add(g.strip())
     daftar_genre = sorted(list(all_genres))
     
@@ -249,9 +253,9 @@ elif halaman == "Rekomendasi Tag":
 
     # Get all unique tags by splitting and flattening the list
     all_tags = set()
-    if 'tag' in df.columns:
-        for tags_str in df['tag'].dropna().unique():
-            for t in str(tags_str).split(','): # Ensure string conversion
+    if 'tags' in df.columns: # Use 'tags' here
+        for tags_str in df['tags'].dropna().unique(): # Use 'tags' here
+            for t in str(tags_str).split(','):
                 all_tags.add(t.strip())
     daftar_tag = sorted(list(all_tags))
 
@@ -265,7 +269,7 @@ elif halaman == "Rekomendasi Tag":
         if tag_pilihan not in st.session_state.history['tag']:
             st.session_state.history['tag'].append(tag_pilihan)
         # Filter based on tag string containing the selected tag
-        hasil = df[df['tag'].str.contains(tag_pilihan, case=False, na=False)]
+        hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)] # Use 'tags' here
         st.markdown("### Rekomendasi Game berdasarkan tag")
         tampilkan_game(hasil)
     else:
@@ -277,9 +281,9 @@ elif halaman == "Rekomendasi Kategori":
 
     # Get all unique categories by splitting and flattening the list
     all_categories = set()
-    if 'category' in df.columns:
-        for categories_str in df['category'].dropna().unique():
-            for c in str(categories_str).split(','): # Ensure string conversion
+    if 'categories' in df.columns: # Use 'categories' here
+        for categories_str in df['categories'].dropna().unique(): # Use 'categories' here
+            for c in str(categories_str).split(','):
                 all_categories.add(c.strip())
     daftar_kategori = sorted(list(all_categories))
 
@@ -293,7 +297,7 @@ elif halaman == "Rekomendasi Kategori":
         if kategori_pilihan not in st.session_state.history['category']:
             st.session_state.history['category'].append(kategori_pilihan)
         # Filter based on category string containing the selected category
-        hasil = df[df['category'].str.contains(kategori_pilihan, case=False, na=False)]
+        hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)] # Use 'categories' here
         st.markdown("### Rekomendasi Game berdasarkan kategori")
         tampilkan_game(hasil)
     else:
