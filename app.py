@@ -1,131 +1,104 @@
+# app.py
 import streamlit as st
-import pandas as pd
 import zipfile
+import os
+import pandas as pd
 import joblib
-import random
-from io import BytesIO
 
-# ------------------------------
-# LOAD DATASET FROM ZIP
-# ------------------------------
+# ===== Fungsi untuk load dataset dari zip =====
 @st.cache_data
+
 def load_data():
     with zipfile.ZipFile("Dataset.zip", 'r') as zip_ref:
-        with zip_ref.open("Dataset.csv") as file:
-            df = pd.read_csv(file)
+        zip_ref.extractall("data")
+    df = pd.read_csv("data/Dataset.csv")
     return df
 
-# ------------------------------
-# LOAD MODELS & VECTORIZERS
-# ------------------------------
+# ===== Fungsi load model =====
 @st.cache_resource
-def load_models():
+
+def load_model():
     model_genre = joblib.load("svm_model.pkl")
-    model_tag = joblib.load("svm_model_tags.pkl")
-    model_cat = joblib.load("svm_model_categories.pkl")
-
+    model_tags = joblib.load("svm_model_tags.pkl")
+    model_categories = joblib.load("svm_model_categories.pkl")
     vec_genre = joblib.load("tfidf_vectorizer.pkl")
-    vec_tag = joblib.load("tfidf_vectorizer_tags.pkl")
-    vec_cat = joblib.load("tfidf_vectorizer_categories.pkl")
+    vec_tags = joblib.load("tfidf_vectorizer_tags.pkl")
+    vec_categories = joblib.load("tfidf_vectorizer_categories.pkl")
+    return model_genre, model_tags, model_categories, vec_genre, vec_tags, vec_categories
 
-    return model_genre, model_tag, model_cat, vec_genre, vec_tag, vec_cat
+# ===== Fungsi prediksi =====
+def predict(df, model, vectorizer):
+    X = vectorizer.transform(df['deskripsi'])
+    pred = model.predict(X)
+    df_result = df.copy()
+    df_result['prediksi'] = pred
+    return df_result
 
-# ------------------------------
-# PREDIKSI SEMUA DATA SEKALI SAJA
-# ------------------------------
-@st.cache_data
-def predict_all(df, model, vectorizer):
-    X = vectorizer.transform(df['short_description'].fillna(""))
-    y_pred = model.predict(X)
-    return y_pred
+# ===== Halaman Beranda =====
+def show_beranda(df):
+    st.subheader("Rekomendasi Game Beranda")
+    for _, row in df.head(10).iterrows():
+        st.markdown(f"### {row['nama']}")
+        st.image(row['gambar'])
+        st.write(row['deskripsi'])
+        st.caption(f"Genre: {row['genre']}")
+        st.caption(f"Tags: {row['tags']}")
+        st.caption(f"Kategori: {row['kategori']}")
 
-# ------------------------------
-# TAMPILKAN GAME
-# ------------------------------
-def tampilkan_game(df):
-    for _, row in df.iterrows():
-        st.subheader(row['name'])
-        st.caption(row.get('short_description', ''))
-        st.markdown("---")
+# ===== Halaman Penjelasan Metode =====
+def show_metode():
+    st.title("Penjelasan Metode")
+    st.write("""
+    Website ini menggunakan pendekatan **Content-Based Filtering**.
+    Deskripsi game dianalisis menggunakan **TF-IDF vectorizer** dan diklasifikasikan
+    ke dalam genre, tag, dan kategori menggunakan **algoritma Support Vector Machine (SVM)**.
+    Model telah dilatih sebelumnya untuk memberikan rekomendasi berdasarkan deskripsi konten game.
+    """)
 
-# ------------------------------
-# MAIN APP
-# ------------------------------
+# ===== Halaman Rekomendasi =====
+def show_rekomendasi(df, kolom, judul):
+    st.title(f"Rekomendasi Game berdasarkan {judul.lower()}")
+    semua_label = sorted(df['prediksi'].unique())
+    selected = st.selectbox(f"Pilih {judul}", [None] + semua_label)
+    if selected:
+        filtered = df[df['prediksi'] == selected]
+    else:
+        filtered = df
+
+    for _, row in filtered.head(10).iterrows():
+        st.markdown(f"### {row['nama']}")
+        st.image(row['gambar'])
+        st.write(row['deskripsi'])
+        st.caption(f"Genre: {row['genre']}")
+        st.caption(f"Tags: {row['tags']}")
+        st.caption(f"Kategori: {row['kategori']}")
+
+# ===== Main App =====
 def main():
-    st.set_page_config(page_title="Sistem Rekomendasi Game", layout="wide")
-    menu = st.sidebar.radio("Navigasi", [
-        "Beranda",
-        "Penjelasan Metode",
-        "Rekomendasi Genre",
-        "Rekomendasi Tag",
-        "Rekomendasi Kategori"
-    ])
+    st.sidebar.title("Navigasi")
+    menu = st.sidebar.radio("Pilih Halaman", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"])
 
     df = load_data()
-    model_genre, model_tag, model_cat, vec_genre, vec_tag, vec_cat = load_models()
-
-    pred_genre = predict_all(df, model_genre, vec_genre)
-    pred_tag = predict_all(df, model_tag, vec_tag)
-    pred_cat = predict_all(df, model_cat, vec_cat)
-
-    df['predicted_genre'] = pred_genre
-    df['predicted_tag'] = pred_tag
-    df['predicted_category'] = pred_cat
+    model_genre, model_tags, model_categories, vec_genre, vec_tags, vec_categories = load_model()
 
     if menu == "Beranda":
-        st.title("🎮 Rekomendasi Game Steam (SVM Model)")
-        st.markdown("Berikut 10 game yang direkomendasikan:")
-        sampel = df.sample(10, random_state=42)
-        tampilkan_game(sampel)
+        df_pred = predict(df, model_genre, vec_genre)
+        show_beranda(df_pred)
 
     elif menu == "Penjelasan Metode":
-        st.title("📚 Penjelasan Metode")
-        st.markdown("""
-        Aplikasi ini menggunakan:
-
-        - **TF-IDF (Term Frequency-Inverse Document Frequency)** untuk mengubah deskripsi teks menjadi angka.
-        - **SVM (Support Vector Machine)** untuk memprediksi genre, tag, dan kategori dari deskripsi game.
-        - **Content-Based Filtering**: Sistem menyarankan game berdasarkan kesamaan konten (deskripsi).
-        """)
+        show_metode()
 
     elif menu == "Rekomendasi Genre":
-        st.title("🎯 Rekomendasi Berdasarkan Genre (Prediksi)")
-        st.markdown("10 Rekomendasi Berdasarkan Prediksi Model:")
-        sampel = df[df['predicted_genre'].notna()].sample(10, random_state=1)
-        tampilkan_game(sampel)
-
-        genre_list = sorted(df['genres'].dropna().str.split(';').explode().unique())
-        selected = st.selectbox("Atau pilih genre:", genre_list)
-        if selected:
-            hasil = df[df['genres'].fillna('').str.contains(selected)]
-            st.markdown(f"Ditemukan {len(hasil)} game dengan genre **{selected}**")
-            tampilkan_game(hasil)
+        df_pred = predict(df, model_genre, vec_genre)
+        show_rekomendasi(df_pred, 'genre', 'Genre')
 
     elif menu == "Rekomendasi Tag":
-        st.title("🏷️ Rekomendasi Berdasarkan Tag (Prediksi)")
-        st.markdown("10 Rekomendasi Berdasarkan Prediksi Model:")
-        sampel = df[df['predicted_tag'].notna()].sample(10, random_state=2)
-        tampilkan_game(sampel)
-
-        tag_list = sorted(df['tags'].dropna().str.split(';').explode().unique())
-        selected = st.selectbox("Atau pilih tag:", tag_list)
-        if selected:
-            hasil = df[df['tags'].fillna('').str.contains(selected)]
-            st.markdown(f"Ditemukan {len(hasil)} game dengan tag **{selected}**")
-            tampilkan_game(hasil)
+        df_pred = predict(df, model_tags, vec_tags)
+        show_rekomendasi(df_pred, 'tags', 'Tag')
 
     elif menu == "Rekomendasi Kategori":
-        st.title("📦 Rekomendasi Berdasarkan Kategori (Prediksi)")
-        st.markdown("10 Rekomendasi Berdasarkan Prediksi Model:")
-        sampel = df[df['predicted_category'].notna()].sample(10, random_state=3)
-        tampilkan_game(sampel)
-
-        cat_list = sorted(df['categories'].dropna().str.split(';').explode().unique())
-        selected = st.selectbox("Atau pilih kategori:", cat_list)
-        if selected:
-            hasil = df[df['categories'].fillna('').str.contains(selected)]
-            st.markdown(f"Ditemukan {len(hasil)} game dengan kategori **{selected}**")
-            tampilkan_game(hasil)
+        df_pred = predict(df, model_categories, vec_categories)
+        show_rekomendasi(df_pred, 'kategori', 'Kategori')
 
 if __name__ == "__main__":
     main()
