@@ -221,8 +221,8 @@ halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "R
 # --- Konten Halaman ---
 
 if halaman == "Beranda":
-    st.title("🎮 Rekomendasi Game Terbaik untuk Anda")
-    st.write("Selamat datang! Dapatkan rekomendasi game personal berdasarkan histori pilihan Anda. Semakin banyak Anda memilih genre, tag, atau kategori, semakin akurat rekomendasi yang diberikan.")
+    st.title("🎮 Rekomendasi Game untuk Anda")
+    st.write("Selamat datang! Dapatkan rekomendasi game berdasarkan histori pilihan Anda.")
     
     st.markdown("---")
     st.header("Rekomendasi Game")
