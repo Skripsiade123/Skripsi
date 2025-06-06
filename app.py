@@ -254,11 +254,11 @@ elif halaman == "Penjelasan Metode":
     Anda mungkin bertanya, "Mengapa hanya SVM, tidak termasuk TF-IDF?"
     **TF-IDF (Term Frequency-Inverse Document Frequency) sebenarnya adalah bagian integral dari proses ini, meskipun tidak secara eksplisit dimuat sebagai model terpisah di sini.**
     """)
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Tf-idf.png/500px-Tf-idf.png", caption="Visualisasi Konsep TF-IDF")
+ 
     st.write("""
     * **TF-IDF** adalah teknik *ekstraksi fitur* yang digunakan untuk mengubah teks mentah (seperti deskripsi game) menjadi representasi numerik yang dapat dipahami oleh algoritma Machine Learning. Tanpa mengubah teks menjadi angka, model seperti SVM tidak akan bisa memprosesnya.
     * Prosesnya adalah sebagai berikut:
-        1.  **Pra-pemrosesan Teks:** Teks deskripsi game dibersihkan (misalnya, menghilangkan tanda baca, mengubah ke huruf kecil, menghapus stopwords).
+        1.  **Pra-pemrosesan Teks:** Pembersihan duplikat data adalah langkah pra-pemrosesan data yang sangat penting dalam hampir setiap proyek data, termasuk sistem rekomendasi melakukan nya agar tidak ada data duplikat.
         2.  **Vektorisasi dengan TF-IDF:** TF-IDF menghitung seberapa penting sebuah kata dalam sebuah dokumen (deskripsi game) relatif terhadap koleksi semua dokumen (semua deskripsi game). Kata-kata yang unik untuk suatu game akan memiliki skor TF-IDF yang tinggi, sementara kata-kata umum (seperti "dan", "atau") akan memiliki skor rendah. Hasilnya adalah vektor numerik untuk setiap deskripsi game.
         3.  **Pelatihan SVM:** Vektor-vektor numerik ini kemudian digunakan sebagai input untuk melatih model SVM. SVM belajar untuk mengidentifikasi pola dalam vektor-vektor ini yang membedakan satu genre dari genre lainnya, satu tag dari tag lainnya, dan seterusnya.
     * Ketika Anda memilih sebuah genre atau tag, aplikasi ini akan mencari game yang memiliki karakteristik serupa berdasarkan representasi numerik ini yang telah dipelajari oleh model SVM.
