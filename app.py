@@ -3,7 +3,7 @@ import pandas as pd
 import zipfile
 import os
 import joblib
-from collections import deque # For fixed-size history if desired
+from collections import deque
 
 # --- Configuration ---
 DATA_DIR = "data"
@@ -14,6 +14,17 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10 # Limit for games displayed on a page
 VIEWED_HISTORY_LIMIT = 20 # Limit for how many unique games to store in viewed history
+
+# --- Custom CSS to hide Streamlit footer ---
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 # --- Helper Functions ---
 
@@ -127,7 +138,7 @@ def get_recommendations_based_on_preferences(data_df):
         return hasil.head(DISPLAY_LIMIT)
     else:
         # Fallback if no preference history exists for personalized recommendation
-        return pd.DataFrame() # Return empty DataFrame, as initial display is handled separately
+        return pd.DataFrame()
 
 def display_game_card(game_row):
     """Displays a single game's information in a structured card format and adds to viewed history."""
@@ -168,9 +179,7 @@ def display_game_card(game_row):
     # Add game to viewed history if it has a name
     if nama != 'Tidak ada nama' and nama not in st.session_state.viewed_games:
         st.session_state.viewed_games.append(nama)
-        # Keep the history limited
-        if len(st.session_state.viewed_games) > VIEWED_HISTORY_LIMIT:
-            st.session_state.viewed_games.pop(0) # Remove oldest
+        # The deque handles popping oldest when maxlen is reached
 
 def display_recommendations(data_df, title, recommendations_df):
     """Displays a title and a list of game recommendations, applying the display limit."""
@@ -180,7 +189,6 @@ def display_recommendations(data_df, title, recommendations_df):
     if recommendations_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
-        # Apply the display limit here if not already applied
         display_df = recommendations_df.head(DISPLAY_LIMIT)
         for _, row in display_df.iterrows():
             display_game_card(row)
@@ -198,8 +206,8 @@ if "viewed_games" not in st.session_state:
     st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT) # Using deque for fixed-size history
 
 # Sidebar Navigation
-st.sidebar.title("Navigasi")
-halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori Pilihan"])
+st.sidebar.title("Dashboard")
+halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
 # --- Page Content ---
 
@@ -271,8 +279,8 @@ elif halaman == "Rekomendasi Genre":
         if genre_pilihan != "Pilih Genre":
             if genre_pilihan not in st.session_state.history['genre']:
                 st.session_state.history['genre'].append(genre_pilihan)
-            hasil = df[df['genre'].str.contains(genre_pilihan, case=False, na=False)] # Filter first
-            display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil) # Limit applied in display_recommendations
+            hasil = df[df['genre'].str.contains(genre_pilihan, case=False, na=False)]
+            display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil)
         else:
             st.info("Pilih genre dari daftar di atas untuk melihat rekomendasi.")
 
@@ -295,8 +303,8 @@ elif halaman == "Rekomendasi Tag":
         if tag_pilihan != "Pilih Tag":
             if tag_pilihan not in st.session_state.history['tag']:
                 st.session_state.history['tag'].append(tag_pilihan)
-            hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)] # Filter first
-            display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil) # Limit applied in display_recommendations
+            hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)]
+            display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil)
         else:
             st.info("Pilih tag dari daftar di atas untuk melihat rekomendasi.")
 
@@ -318,25 +326,23 @@ elif halaman == "Rekomendasi Kategori":
         if kategori_pilihan != "Pilih Kategori":
             if kategori_pilihan not in st.session_state.history['category']:
                 st.session_state.history['category'].append(kategori_pilihan)
-            hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)] # Filter first
-            display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil) # Limit applied in display_recommendations
+            hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)]
+            display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil)
         else:
             st.info("Pilih kategori dari daftar di atas untuk melihat rekomendasi.")
 
-elif halaman == "Histori Pilihan":
+elif halaman == "Histori":
     st.title("🕒 Histori Game yang Dilihat")
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
     if st.session_state.viewed_games:
-        st.subheader("Game Terakhir Dilihat:")
-        # Reverse to show most recent first
+        # Display most recent first
         for game_name in reversed(list(st.session_state.viewed_games)):
-            # Find the game's details from the main DataFrame
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
-                display_game_card(game_details.iloc[0]) # Display the card for the game
+                display_game_card(game_details.iloc[0])
             else:
-                st.markdown(f"- {game_name} (Detail tidak ditemukan)") # Fallback if game details are gone
+                st.markdown(f"- **{game_name}** (Detail tidak ditemukan)")
     else:
         st.info("Anda belum melihat game apa pun. Jelajahi rekomendasi untuk memulai!")
 
@@ -349,7 +355,7 @@ elif halaman == "Histori Pilihan":
 
     st.markdown("---")
     st.subheader("Preferensi Rekomendasi Tersimpan (untuk algoritma)")
-    st.write("Sistem menggunakan preferensi ini untuk memberikan rekomendasi personal:")
+    st.write("Sistem menggunakan preferensi ini untuk memberikan rekomendasi personal. Ini terpisah dari histori game yang Anda lihat.")
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -376,7 +382,7 @@ elif halaman == "Histori Pilihan":
         else:
             st.markdown("- Tidak ada")
 
-    if st.button("Bersihkan Preferensi Rekomendasi"):
+    if st.button("Bersihkan Preferensi Rekomendasi", key="clear_pref_history"): # Added key to prevent warning
         st.session_state.history = {"genre": [], "tag": [], "category": []}
         st.success("Preferensi rekomendasi telah dibersihkan!")
         st.rerun()
