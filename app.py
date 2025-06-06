@@ -15,12 +15,23 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10 # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20 # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
-# --- Custom CSS untuk menyembunyikan footer dan header Streamlit ---
+# --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan sidebar ---
 hide_streamlit_style = """
     <style>
-    #MainMenu {visibility: hidden;} /* Menyembunyikan tombol tiga titik di kanan atas */
-    footer {visibility: hidden;}   /* Menyembunyikan footer "Made with Streamlit" */
-    header {visibility: hidden;}   /* Menyembunyikan header termasuk "Manage app" dan status koneksi */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    /* Menghilangkan pesan info/success/warning di sidebar */
+    .stAlert {
+        display: none !important;
+    }
+    /* Opsional: jika ingin menyembunyikan bagian pra-pemrosesan data juga */
+    h3:contains("Pra-pemrosesan Data:") {
+        display: none !important;
+    }
+    .stAlert[data-testid="stSidebar"] { /* Ini menargetkan spesifik alert di sidebar, tapi .stAlert lebih umum */
+        display: none !important;
+    }
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -32,11 +43,11 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
     if not os.path.exists(DATA_DIR):
-        st.info(f"")
+        st.info(f"Mengekstrak {ZIP_FILE_NAME}...") # Pesan ini akan tetap disembunyikan
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
                 zip_ref.extractall(DATA_DIR)
-            st.success("")
+            st.success("Dataset berhasil diekstrak!") # Pesan ini akan tetap disembunyikan
         except FileNotFoundError:
             st.error(f"Error: {ZIP_FILE_NAME} tidak ditemukan. Pastikan file berada di direktori yang sama dengan skrip.")
             st.stop()
@@ -53,10 +64,10 @@ def load_data():
                     df = pd.read_csv(os.path.join(root, file))
                     df.columns = df.columns.str.strip().str.lower() # Normalisasi nama kolom
                     csv_found = True
-                    st.sidebar.success(f"Dataset '{file}' berhasil dimuat.")
+                    st.sidebar.success(f"Dataset '{file}' berhasil dimuat.") # Pesan ini akan tetap disembunyikan
                     break
                 except Exception as e:
-                    st.sidebar.error(f"Error saat memuat CSV '{file}': {e}")
+                    st.sidebar.error(f"Error saat memuat CSV '{file}': {e}") # Pesan ini akan tetap disembunyikan
         if csv_found:
             break
 
@@ -65,31 +76,31 @@ def load_data():
         return pd.DataFrame()
 
     if not df.empty:
-        st.sidebar.subheader("")
+        st.sidebar.subheader("Pra-pemrosesan Data:") # Subheader ini juga bisa disembunyikan jika mau
 
         # Penghapusan Duplikat
         if 'name' in df.columns:
             initial_rows = len(df)
             df.drop_duplicates(subset=['name'], inplace=True, keep='first')
             if initial_rows - len(df) > 0:
-                st.sidebar.info(f"")
+                st.sidebar.info(f"Menghapus {initial_rows - len(df)} entri game duplikat berdasarkan 'name'.") # Pesan ini akan tetap disembunyikan
         else:
-            st.sidebar.warning("")
+            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.") # Pesan ini akan tetap disembunyikan
 
         # Menangani Deskripsi Singkat yang Hilang
         if 'short description' in df.columns:
             df['short description'] = df['short description'].fillna('Deskripsi tidak tersedia.')
         else:
-            st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.")
+            st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.") # Pesan ini akan tetap disembunyikan
 
         # Menangani Genre, Tags, Categories, Header Image, Positive Reviews yang Hilang
         for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews']:
             if col in df.columns:
-                df[col] = df[col].fillna('') # Mengisi NaN dengan string kosong atau 0 untuk kolom numerik
-                if col == 'positive reviews': # Pastikan itu numerik untuk pengurutan
+                df[col] = df[col].fillna('')
+                if col == 'positive reviews':
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
-                st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")
+                st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.") # Pesan ini akan tetap disembunyikan
         
         # Pastikan URL gambar valid
         if 'header image' in df.columns:
@@ -104,7 +115,7 @@ def load_svm_models():
         model_genre = joblib.load(SVM_MODEL_GENRE)
         model_tag = joblib.load(SVM_MODEL_TAG)
         model_category = joblib.load(SVM_MODEL_CATEGORY)
-        st.sidebar.success("Model SVM berhasil dimuat.")
+        st.sidebar.success("Model SVM berhasil dimuat.") # Pesan ini akan tetap disembunyikan
         return model_genre, model_tag, model_category
     except FileNotFoundError:
         st.error(f"Satu atau lebih file model ({SVM_MODEL_GENRE}, {SVM_MODEL_TAG}, {SVM_MODEL_CATEGORY}) tidak ditemukan. Pastikan file berada di direktori yang sama.")
@@ -137,8 +148,7 @@ def get_recommendations_based_on_preferences(data_df):
         hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
         return hasil.head(DISPLAY_LIMIT)
     else:
-        # Cadangan jika tidak ada histori preferensi untuk rekomendasi personal
-        return pd.DataFrame() # Mengembalikan DataFrame kosong, karena tampilan awal ditangani secara terpisah
+        return pd.DataFrame()
 
 def display_game_card(game_row):
     """Menampilkan informasi game tunggal dalam format kartu terstruktur dan menambahkannya ke histori yang dilihat."""
@@ -179,7 +189,6 @@ def display_game_card(game_row):
     # Tambahkan game ke histori yang dilihat jika memiliki nama
     if nama != 'Tidak ada nama' and nama not in st.session_state.viewed_games:
         st.session_state.viewed_games.append(nama)
-        # Deque akan menangani penghapusan item tertua jika maxlen tercapai
 
 def display_recommendations(data_df, title, recommendations_df):
     """Menampilkan judul dan daftar rekomendasi game, menerapkan batas tampilan."""
@@ -203,7 +212,7 @@ model_genre, model_tag, model_category = load_svm_models()
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
 if "viewed_games" not in st.session_state:
-    st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT) # Menggunakan deque untuk histori berukuran tetap
+    st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT)
 
 # Navigasi Sidebar
 st.sidebar.title("Dashboard")
@@ -218,20 +227,17 @@ if halaman == "Beranda":
     st.markdown("---")
     st.header("Rekomendasi Game")
     
-    # Periksa apakah histori preferensi benar-benar kosong (untuk logika rekomendasi awal)
     is_preference_history_empty = not (st.session_state.history["genre"] or 
                                        st.session_state.history["tag"] or 
                                        st.session_state.history["category"])
 
     if is_preference_history_empty:
-        # Tampilan awal: Top berdasarkan Ulasan Positif jika tidak ada histori preferensi
         st.info("Anda belum memiliki histori preferensi genre/tag/kategori. Berikut adalah game dengan review positif terbanyak:")
         if 'positive reviews' in df.columns and not df.empty:
             rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
-            rekomendasi = pd.DataFrame() # Tidak ada kolom 'positive reviews' atau df kosong
+            rekomendasi = pd.DataFrame()
     else:
-        # Jika histori preferensi ada, gunakan rekomendasi berbasis histori
         st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda sebelumnya:")
         rekomendasi = get_recommendations_based_on_preferences(df)
 
@@ -336,7 +342,6 @@ elif halaman == "Histori":
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
     if st.session_state.viewed_games:
-        # Tampilkan yang paling baru terlebih dahulu
         for game_name in reversed(list(st.session_state.viewed_games)):
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
