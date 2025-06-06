@@ -24,7 +24,7 @@ def load_data():
                 zip_ref.extractall(DATA_DIR)
             st.success("Dataset extracted successfully!")
         except FileNotFoundError:
-            st.error(f"Error: {ZIP_FILE_NAME} not found. Please ensure it's in the same directory as the script.")
+            st.error(f"Error: {ZIP_FILE_name} not found. Please ensure it's in the same directory as the script.")
             st.stop()
         except Exception as e:
             st.error(f"Error extracting zip file: {e}")
@@ -138,9 +138,11 @@ def display_game_card(game_row):
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
 
-    genres_formatted = "<br>".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
-    tags_formatted = "<br>".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
-    kategoris_formatted = "<br>".join([k.strip() for k in kategori_str.split(',') if k.strip()]) if kategori_str else '-'
+    # --- MODIFIED: Join with comma and space instead of <br> ---
+    genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
+    tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
+    kategoris_formatted = ", ".join([k.strip() for k in kategori_str.split(',') if k.strip()]) if kategori_str else '-'
+    # --- END MODIFIED ---
 
     gambar = game_row.get('header image', '')
     if not isinstance(gambar, str) or not gambar.startswith("http") or not gambar.strip():
@@ -165,7 +167,8 @@ def display_game_card(game_row):
 
 def display_recommendations(data_df, title, recommendations_df):
     """Displays a title and a list of game recommendations."""
-    st.subheader(title)
+    if title: # Only display subheader if title is provided
+        st.subheader(title)
     if recommendations_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
@@ -295,7 +298,8 @@ elif halaman == "Histori Pilihan":
     st.title("🕒 Histori Pilihan Anda")
     st.write("Lihat genre, tag, dan kategori yang telah Anda pilih. Ini membantu sistem merekomendasikan game yang lebih sesuai untuk Anda.")
 
-    col1, col2 = st.columns(2)
+    # Use columns for a neater history display
+    col1, col2, col3 = st.columns(3) # Use 3 columns for genre, tag, category if space allows
 
     with col1:
         st.subheader("Histori Genre")
@@ -313,12 +317,13 @@ elif halaman == "Histori Pilihan":
         else:
             st.info("Anda belum memilih tag apa pun.")
     
-    st.subheader("Histori Kategori")
-    if st.session_state.history["category"]:
-        for i, category in enumerate(st.session_state.history["category"]):
-            st.markdown(f"- {category}")
-    else:
-        st.info("Anda belum memilih kategori apa pun.")
+    with col3: # Moved category to third column
+        st.subheader("Histori Kategori")
+        if st.session_state.history["category"]:
+            for i, category in enumerate(st.session_state.history["category"]):
+                st.markdown(f"- {category}")
+        else:
+            st.info("Anda belum memilih kategori apa pun.")
 
     st.markdown("---")
     st.header("Rekomendasi Berdasarkan Kombinasi Histori")
