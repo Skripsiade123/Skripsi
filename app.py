@@ -5,43 +5,43 @@ import os
 import joblib
 from collections import deque
 
-# --- Configuration ---
+# --- Konfigurasi ---
 DATA_DIR = "data"
 ZIP_FILE_NAME = "Dataset.zip"
 SVM_MODEL_GENRE = "svm_model.pkl"
 SVM_MODEL_TAG = "svm_model_tags.pkl"
 SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
-DISPLAY_LIMIT = 10 # Limit for games displayed on a page
-VIEWED_HISTORY_LIMIT = 20 # Limit for how many unique games to store in viewed history
+DISPLAY_LIMIT = 10 # Batas untuk game yang ditampilkan di satu halaman
+VIEWED_HISTORY_LIMIT = 20 # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
-# --- Custom CSS to hide Streamlit footer ---
+# --- Custom CSS untuk menyembunyikan footer dan header Streamlit ---
 hide_streamlit_style = """
     <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;} /* Menyembunyikan tombol tiga titik di kanan atas */
+    footer {visibility: hidden;}   /* Menyembunyikan footer "Made with Streamlit" */
+    header {visibility: hidden;}   /* Menyembunyikan header termasuk "Manage app" dan status koneksi */
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
-# --- Helper Functions ---
+# --- Fungsi Pembantu ---
 
 @st.cache_data
 def load_data():
-    """Loads and preprocesses the dataset from a ZIP file."""
+    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
     if not os.path.exists(DATA_DIR):
-        st.info(f"Extracting {ZIP_FILE_NAME}...")
+        st.info(f"Mengekstrak {ZIP_FILE_NAME}...")
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
                 zip_ref.extractall(DATA_DIR)
-            st.success("Dataset extracted successfully!")
+            st.success("Dataset berhasil diekstrak!")
         except FileNotFoundError:
-            st.error(f"Error: {ZIP_FILE_NAME} not found. Please ensure it's in the same directory as the script.")
+            st.error(f"Error: {ZIP_FILE_NAME} tidak ditemukan. Pastikan file berada di direktori yang sama dengan skrip.")
             st.stop()
         except Exception as e:
-            st.error(f"Error extracting zip file: {e}")
+            st.error(f"Error saat mengekstrak file zip: {e}")
             st.stop()
 
     df = pd.DataFrame()
@@ -51,47 +51,47 @@ def load_data():
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
                     df = pd.read_csv(os.path.join(root, file))
-                    df.columns = df.columns.str.strip().str.lower() # Normalize column names
+                    df.columns = df.columns.str.strip().str.lower() # Normalisasi nama kolom
                     csv_found = True
-                    st.sidebar.success(f"Dataset '{file}' loaded successfully.")
+                    st.sidebar.success(f"Dataset '{file}' berhasil dimuat.")
                     break
                 except Exception as e:
-                    st.sidebar.error(f"Error loading CSV '{file}': {e}")
+                    st.sidebar.error(f"Error saat memuat CSV '{file}': {e}")
         if csv_found:
             break
 
     if not csv_found:
-        st.error(f"No suitable dataset CSV file found in the '{DATA_DIR}' directory after extraction.")
+        st.error(f"Tidak ada file CSV dataset yang cocok ditemukan di direktori '{DATA_DIR}' setelah ekstraksi.")
         return pd.DataFrame()
 
     if not df.empty:
-        st.sidebar.subheader("Data Preprocessing:")
+        st.sidebar.subheader("Pra-pemrosesan Data:")
 
-        # Deduplication
+        # Penghapusan Duplikat
         if 'name' in df.columns:
             initial_rows = len(df)
             df.drop_duplicates(subset=['name'], inplace=True, keep='first')
             if initial_rows - len(df) > 0:
-                st.sidebar.info(f"Dropped {initial_rows - len(df)} duplicate game entries based on 'name'.")
+                st.sidebar.info(f"Menghapus {initial_rows - len(df)} entri game duplikat berdasarkan 'name'.")
         else:
-            st.sidebar.warning("Column 'name' not found for duplicate removal. Skipping deduplication.")
+            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.")
 
-        # Handle Missing 'Short Description'
+        # Menangani Deskripsi Singkat yang Hilang
         if 'short description' in df.columns:
             df['short description'] = df['short description'].fillna('Deskripsi tidak tersedia.')
         else:
-            st.sidebar.warning("Column 'short description' not found. Game descriptions might be missing.")
+            st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.")
 
-        # Handle Missing 'Genre', 'Tags', 'Categories', 'Header Image', 'Positive Reviews'
+        # Menangani Genre, Tags, Categories, Header Image, Positive Reviews yang Hilang
         for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews']:
             if col in df.columns:
-                df[col] = df[col].fillna('') # Fill NaN with empty string or 0 for numeric columns
-                if col == 'positive reviews': # Ensure it's numeric for sorting
+                df[col] = df[col].fillna('') # Mengisi NaN dengan string kosong atau 0 untuk kolom numerik
+                if col == 'positive reviews': # Pastikan itu numerik untuk pengurutan
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
-                st.sidebar.warning(f"Column '{col}' not found in dataset. Ensure correct column names.")
+                st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")
         
-        # Ensure image URLs are valid
+        # Pastikan URL gambar valid
         if 'header image' in df.columns:
             df['header image'] = df['header image'].apply(lambda x: x if (isinstance(x, str) and x.startswith("http")) else "")
 
@@ -99,22 +99,22 @@ def load_data():
 
 @st.cache_resource
 def load_svm_models():
-    """Loads pre-trained SVM models."""
+    """Memuat model SVM yang sudah dilatih."""
     try:
         model_genre = joblib.load(SVM_MODEL_GENRE)
         model_tag = joblib.load(SVM_MODEL_TAG)
         model_category = joblib.load(SVM_MODEL_CATEGORY)
-        st.sidebar.success("SVM Models loaded successfully.")
+        st.sidebar.success("Model SVM berhasil dimuat.")
         return model_genre, model_tag, model_category
     except FileNotFoundError:
-        st.error(f"One or more model files ({SVM_MODEL_GENRE}, {SVM_MODEL_TAG}, {SVM_MODEL_CATEGORY}) not found. Please ensure they are in the same directory.")
+        st.error(f"Satu atau lebih file model ({SVM_MODEL_GENRE}, {SVM_MODEL_TAG}, {SVM_MODEL_CATEGORY}) tidak ditemukan. Pastikan file berada di direktori yang sama.")
         st.stop()
     except Exception as e:
-        st.error(f"Error loading SVM models: {e}. Please check your model files.")
+        st.error(f"Error saat memuat model SVM: {e}. Periksa file model Anda.")
         st.stop()
 
 def get_recommendations_based_on_preferences(data_df):
-    """Generates game recommendations based on user's selected genre/tag/category history."""
+    """Menghasilkan rekomendasi game berdasarkan histori preferensi genre/tag/kategori pengguna."""
     preferensi_genre = st.session_state.history["genre"]
     preferensi_tag = st.session_state.history["tag"]
     preferensi_kat = st.session_state.history["category"]
@@ -123,7 +123,7 @@ def get_recommendations_based_on_preferences(data_df):
         df_temp = data_df.copy()
         df_temp["score"] = 0
 
-        # Weighted scoring for historical preferences
+        # Penilaian berbobot untuk preferensi historis
         if preferensi_genre and 'genre' in df_temp.columns:
             for pref_g in preferensi_genre:
                 df_temp.loc[df_temp["genre"].str.contains(pref_g, case=False, na=False), "score"] += 3
@@ -137,11 +137,11 @@ def get_recommendations_based_on_preferences(data_df):
         hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
         return hasil.head(DISPLAY_LIMIT)
     else:
-        # Fallback if no preference history exists for personalized recommendation
-        return pd.DataFrame()
+        # Cadangan jika tidak ada histori preferensi untuk rekomendasi personal
+        return pd.DataFrame() # Mengembalikan DataFrame kosong, karena tampilan awal ditangani secara terpisah
 
 def display_game_card(game_row):
-    """Displays a single game's information in a structured card format and adds to viewed history."""
+    """Menampilkan informasi game tunggal dalam format kartu terstruktur dan menambahkannya ke histori yang dilihat."""
     nama = game_row.get('name', 'Tidak ada nama').strip()
     short_description = game_row.get('short description', 'Deskripsi tidak tersedia.').strip()
     if not short_description:
@@ -176,13 +176,13 @@ def display_game_card(game_row):
     </div>
     """, unsafe_allow_html=True)
     
-    # Add game to viewed history if it has a name
+    # Tambahkan game ke histori yang dilihat jika memiliki nama
     if nama != 'Tidak ada nama' and nama not in st.session_state.viewed_games:
         st.session_state.viewed_games.append(nama)
-        # The deque handles popping oldest when maxlen is reached
+        # Deque akan menangani penghapusan item tertua jika maxlen tercapai
 
 def display_recommendations(data_df, title, recommendations_df):
-    """Displays a title and a list of game recommendations, applying the display limit."""
+    """Menampilkan judul dan daftar rekomendasi game, menerapkan batas tampilan."""
     if title:
         st.subheader(title)
     
@@ -193,23 +193,23 @@ def display_recommendations(data_df, title, recommendations_df):
         for _, row in display_df.iterrows():
             display_game_card(row)
 
-# --- Main App Logic ---
+# --- Logika Utama Aplikasi ---
 
-# Load data and models
+# Memuat data dan model
 df = load_data()
 model_genre, model_tag, model_category = load_svm_models()
 
-# Initialize session state for history and viewed games
+# Inisialisasi session state untuk histori dan game yang dilihat
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
 if "viewed_games" not in st.session_state:
-    st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT) # Using deque for fixed-size history
+    st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT) # Menggunakan deque untuk histori berukuran tetap
 
-# Sidebar Navigation
-st.sidebar.title("Dashboard")
-halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
+# Navigasi Sidebar
+st.sidebar.title("Navigasi")
+halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori Pilihan"])
 
-# --- Page Content ---
+# --- Konten Halaman ---
 
 if halaman == "Beranda":
     st.title("🎮 Rekomendasi Game Terbaik untuk Anda")
@@ -218,20 +218,20 @@ if halaman == "Beranda":
     st.markdown("---")
     st.header("Rekomendasi Game")
     
-    # Check if preference history is truly empty (for initial recommendation logic)
+    # Periksa apakah histori preferensi benar-benar kosong (untuk logika rekomendasi awal)
     is_preference_history_empty = not (st.session_state.history["genre"] or 
                                        st.session_state.history["tag"] or 
                                        st.session_state.history["category"])
 
     if is_preference_history_empty:
-        # Initial display: Top by Positive Reviews if no preference history
+        # Tampilan awal: Top berdasarkan Ulasan Positif jika tidak ada histori preferensi
         st.info("Anda belum memiliki histori preferensi genre/tag/kategori. Berikut adalah game dengan review positif terbanyak:")
         if 'positive reviews' in df.columns and not df.empty:
             rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
-            rekomendasi = pd.DataFrame() # No 'positive reviews' column or empty df
+            rekomendasi = pd.DataFrame() # Tidak ada kolom 'positive reviews' atau df kosong
     else:
-        # If preference history exists, use the history-based recommendation
+        # Jika histori preferensi ada, gunakan rekomendasi berbasis histori
         st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda sebelumnya:")
         rekomendasi = get_recommendations_based_on_preferences(df)
 
@@ -252,7 +252,7 @@ elif halaman == "Penjelasan Metode":
     st.write("""
     * **TF-IDF** adalah teknik *ekstraksi fitur* yang digunakan untuk mengubah teks mentah (seperti deskripsi game) menjadi representasi numerik yang dapat dipahami oleh algoritma Machine Learning. Tanpa mengubah teks menjadi angka, model seperti SVM tidak akan bisa memprosesnya.
     * Prosesnya adalah sebagai berikut:
-        1.  **Preprocessing Teks:** Teks deskripsi game dibersihkan (misalnya, menghilangkan tanda baca, mengubah ke huruf kecil, menghapus stopwords).
+        1.  **Pra-pemrosesan Teks:** Teks deskripsi game dibersihkan (misalnya, menghilangkan tanda baca, mengubah ke huruf kecil, menghapus stopwords).
         2.  **Vektorisasi dengan TF-IDF:** TF-IDF menghitung seberapa penting sebuah kata dalam sebuah dokumen (deskripsi game) relatif terhadap koleksi semua dokumen (semua deskripsi game). Kata-kata yang unik untuk suatu game akan memiliki skor TF-IDF yang tinggi, sementara kata-kata umum (seperti "dan", "atau") akan memiliki skor rendah. Hasilnya adalah vektor numerik untuk setiap deskripsi game.
         3.  **Pelatihan SVM:** Vektor-vektor numerik ini kemudian digunakan sebagai input untuk melatih model SVM. SVM belajar untuk mengidentifikasi pola dalam vektor-vektor ini yang membedakan satu genre dari genre lainnya, satu tag dari tag lainnya, dan seterusnya.
     * Ketika Anda memilih sebuah genre atau tag, aplikasi ini akan mencari game yang memiliki karakteristik serupa berdasarkan representasi numerik ini yang telah dipelajari oleh model SVM.
@@ -331,12 +331,12 @@ elif halaman == "Rekomendasi Kategori":
         else:
             st.info("Pilih kategori dari daftar di atas untuk melihat rekomendasi.")
 
-elif halaman == "Histori":
+elif halaman == "Histori Pilihan":
     st.title("🕒 Histori Game yang Dilihat")
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
     if st.session_state.viewed_games:
-        # Display most recent first
+        # Tampilkan yang paling baru terlebih dahulu
         for game_name in reversed(list(st.session_state.viewed_games)):
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
@@ -382,7 +382,7 @@ elif halaman == "Histori":
         else:
             st.markdown("- Tidak ada")
 
-    if st.button("Bersihkan Preferensi Rekomendasi", key="clear_pref_history"): # Added key to prevent warning
+    if st.button("Bersihkan Preferensi Rekomendasi", key="clear_pref_history"):
         st.session_state.history = {"genre": [], "tag": [], "category": []}
         st.success("Preferensi rekomendasi telah dibersihkan!")
         st.rerun()
