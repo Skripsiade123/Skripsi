@@ -6,7 +6,7 @@ import joblib
 
 # === Membaca dataset dari ZIP ===
 def load_data():
-    with zipfile.ZipFile("dataset.zip", 'r') as zip_ref:
+    with zipfile.ZipFile("Dataset.zip", 'r') as zip_ref:
         zip_ref.extractall("data")
     df = pd.read_csv("data/games.csv")
     return df
@@ -26,19 +26,25 @@ halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "R
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
 
-# === Fungsi Rekomendasi Berdasarkan Preferensi Gabungan ===
+# === Fungsi Rekomendasi Berdasarkan Preferensi Gabungan dengan Bobot ===
 def rekomendasi_berdasarkan_histori():
     preferensi_genre = st.session_state.history["genre"]
     preferensi_tag = st.session_state.history["tag"]
     preferensi_kat = st.session_state.history["category"]
 
     if preferensi_genre or preferensi_tag or preferensi_kat:
-        hasil = df[
-            df["genre"].isin(preferensi_genre) |
-            df["tag"].isin(preferensi_tag) |
-            df["category"].isin(preferensi_kat)
-        ]
-        return hasil.sample(min(10, len(hasil)))
+        df_temp = df.copy()
+        df_temp["score"] = 0
+
+        if preferensi_genre:
+            df_temp.loc[df_temp["genre"].isin(preferensi_genre), "score"] += 3
+        if preferensi_tag:
+            df_temp.loc[df_temp["tag"].isin(preferensi_tag), "score"] += 2
+        if preferensi_kat:
+            df_temp.loc[df_temp["category"].isin(preferensi_kat), "score"] += 1
+
+        hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
+        return hasil.head(10)
     else:
         return df.sample(10)
 
