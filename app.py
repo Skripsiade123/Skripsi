@@ -8,15 +8,15 @@ import joblib
 def load_data():
     with zipfile.ZipFile("Dataset.zip", 'r') as zip_ref:
         zip_ref.extractall("data")
-    df = pd.read_csv("data/Dataset.csv")
+    df = pd.read_csv("data/games.csv")
     return df
 
 df = load_data()
 
 # === Load semua model SVM ===
-model_genre = joblib.load("data/model_svm_genre.pkl")
-model_tag = joblib.load("data/model_svm_tag.pkl")
-model_category = joblib.load("data/model_svm_category.pkl")
+model_genre = joblib.load("svm_model.pkl")
+model_tag = joblib.load("svm_model_tags.pkl")
+model_category = joblib.load("svm_model_categories.pkl")
 
 # === Sidebar Navigasi ===
 st.sidebar.title("Navigasi")
