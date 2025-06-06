@@ -32,11 +32,11 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
     if not os.path.exists(DATA_DIR):
-        st.info(f"Mengekstrak {ZIP_FILE_NAME}...")
+        st.info(f"")
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
                 zip_ref.extractall(DATA_DIR)
-            st.success("Dataset berhasil diekstrak!")
+            st.success("")
         except FileNotFoundError:
             st.error(f"Error: {ZIP_FILE_NAME} tidak ditemukan. Pastikan file berada di direktori yang sama dengan skrip.")
             st.stop()
@@ -65,16 +65,16 @@ def load_data():
         return pd.DataFrame()
 
     if not df.empty:
-        st.sidebar.subheader("Pra-pemrosesan Data:")
+        st.sidebar.subheader("")
 
         # Penghapusan Duplikat
         if 'name' in df.columns:
             initial_rows = len(df)
             df.drop_duplicates(subset=['name'], inplace=True, keep='first')
             if initial_rows - len(df) > 0:
-                st.sidebar.info(f"Menghapus {initial_rows - len(df)} entri game duplikat berdasarkan 'name'.")
+                st.sidebar.info(f"")
         else:
-            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.")
+            st.sidebar.warning("")
 
         # Menangani Deskripsi Singkat yang Hilang
         if 'short description' in df.columns:
@@ -206,8 +206,8 @@ if "viewed_games" not in st.session_state:
     st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT) # Menggunakan deque untuk histori berukuran tetap
 
 # Navigasi Sidebar
-st.sidebar.title("Navigasi")
-halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori Pilihan"])
+st.sidebar.title("Dashboard")
+halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
 # --- Konten Halaman ---
 
@@ -331,7 +331,7 @@ elif halaman == "Rekomendasi Kategori":
         else:
             st.info("Pilih kategori dari daftar di atas untuk melihat rekomendasi.")
 
-elif halaman == "Histori Pilihan":
+elif halaman == "Histori":
     st.title("🕒 Histori Game yang Dilihat")
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
