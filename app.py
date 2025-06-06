@@ -10,12 +10,11 @@ def load_data():
         with zipfile.ZipFile("Dataset.zip", 'r') as zip_ref:
             zip_ref.extractall("data")
 
-    # Cari file CSV di dalam folder hasil ekstraksi
     for root, dirs, files in os.walk("data"):
         for file in files:
             if file.lower().endswith(".csv") and "dataset" in file.lower():
                 df = pd.read_csv(os.path.join(root, file))
-                df.columns = df.columns.str.strip().str.lower()  # Normalisasi nama kolom
+                df.columns = df.columns.str.strip().str.lower()
                 return df
 
     st.error("File Dataset.csv tidak ditemukan dalam ZIP.")
@@ -69,13 +68,19 @@ def tampilkan_game(hasil):
         gambar = row.get('img', '')
 
         st.markdown(f"""
-        <div style="border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background-color: #f9f9f9;">
-            <h4>{nama}</h4>
-            <img src="{gambar}" style="max-height:200px; max-width:100%; border-radius:10px;"><br>
-            <p>{deskripsi}</p>
-            <p><strong>Genre:</strong> {genre} &nbsp;|&nbsp;
-               <strong>Tags:</strong> {tag} &nbsp;|&nbsp;
-               <strong>Kategori:</strong> {kategori}</p>
+        <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222;">
+            <div style="flex-shrink: 0;">
+                <img src="{gambar}" style="width: 180px; height: auto; border-radius: 10px; object-fit: cover;">
+            </div>
+            <div style="flex-grow: 1; color: white;">
+                <h4 style="margin-bottom: 5px;">{nama}</h4>
+                <p style="font-size: 14px; margin-bottom: 10px;">{deskripsi}</p>
+                <p style="font-size: 13px;">
+                    <strong>Genre:</strong> {genre} <br>
+                    <strong>Tags:</strong> {tag} <br>
+                    <strong>Kategori:</strong> {kategori}
+                </p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -94,7 +99,7 @@ elif halaman == "Penjelasan Metode":
 # === Halaman Rekomendasi Genre ===
 elif halaman == "Rekomendasi Genre":
     st.title("🎯 Rekomendasi Berdasarkan Genre")
-    st.write("10 Game Rekomendasi Umum Berdasarkan Genre")
+    st.subheader("10 Game Rekomendasi Umum Berdasarkan Genre")
     tampilkan_game(df.sample(10))
 
     st.subheader("Pilih Genre:")
@@ -110,7 +115,7 @@ elif halaman == "Rekomendasi Genre":
 # === Halaman Rekomendasi Tag ===
 elif halaman == "Rekomendasi Tag":
     st.title("🏷️ Rekomendasi Berdasarkan Tag")
-    st.write("10 Game Rekomendasi Umum Berdasarkan Tag")
+    st.subheader("10 Game Rekomendasi Umum Berdasarkan Tag")
     tampilkan_game(df.sample(10))
 
     st.subheader("Pilih Tag:")
@@ -126,7 +131,7 @@ elif halaman == "Rekomendasi Tag":
 # === Halaman Rekomendasi Kategori ===
 elif halaman == "Rekomendasi Kategori":
     st.title("📂 Rekomendasi Berdasarkan Kategori")
-    st.write("10 Game Rekomendasi Umum Berdasarkan Kategori")
+    st.subheader("10 Game Rekomendasi Umum Berdasarkan Kategori")
     tampilkan_game(df.sample(10))
 
     st.subheader("Pilih Kategori:")
