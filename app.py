@@ -61,15 +61,23 @@ def rekomendasi_berdasarkan_histori():
 # === Fungsi untuk Menampilkan Game dengan Format Kartu ===
 def tampilkan_game(hasil):
     for i, row in hasil.iterrows():
-        st.markdown(f"""
-        ### {row['title']}
-        {row['deskripsi']}
+        nama = row.get('name', 'Tidak ada nama')
+        deskripsi = row.get('deskripsi', row.get('description', 'Deskripsi tidak tersedia.'))
+        genre = row.get('genre', '-')
+        tag = row.get('tag', '-')
+        kategori = row.get('category', '-')
+        gambar = row.get('img', '')
 
-        **Genre**: {row['genre']}  
-        **Tags**: {row['tag']}  
-        **Kategori**: {row['category']}  
-        ---
-        """)
+        st.markdown(f"""
+        <div style="border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background-color: #f9f9f9;">
+            <h4>{nama}</h4>
+            <img src="{gambar}" style="max-height:200px; max-width:100%; border-radius:10px;"><br>
+            <p>{deskripsi}</p>
+            <p><strong>Genre:</strong> {genre} &nbsp;|&nbsp;
+               <strong>Tags:</strong> {tag} &nbsp;|&nbsp;
+               <strong>Kategori:</strong> {kategori}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # === Halaman Beranda ===
 if halaman == "Beranda":
