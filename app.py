@@ -23,9 +23,14 @@ def load_data():
 df = load_data()
 
 # === Load semua model SVM ===
-model_genre = joblib.load("svm_model.pkl")
-model_tag = joblib.load("svm_model_tags.pkl")
-model_category = joblib.load("svm_model_categories.pkl")
+# Ensure these files exist or handle their absence gracefully
+try:
+    model_genre = joblib.load("svm_model.pkl")
+    model_tag = joblib.load("svm_model_tags.pkl")
+    model_category = joblib.load("svm_model_categories.pkl")
+except FileNotFoundError:
+    st.error("Model files (svm_model.pkl, svm_model_tags.pkl, svm_model_categories.pkl) not found. Please ensure they are in the same directory.")
+    st.stop() # Stop the app if models are not found
 
 # === Sidebar Navigasi ===
 st.sidebar.title("Navigasi")
@@ -46,19 +51,29 @@ def rekomendasi_berdasarkan_histori():
         df_temp["score"] = 0
 
         if preferensi_genre:
-            df_temp.loc[df_temp["genre"].isin(preferensi_genre), "score"] += 3
+            # Check if 'genre' column exists in df_temp before using isin
+            if 'genre' in df_temp.columns:
+                df_temp.loc[df_temp["genre"].isin(preferensi_genre), "score"] += 3
         if preferensi_tag:
-            df_temp.loc[df_temp["tag"].isin(preferensi_tag), "score"] += 2
+            # Check if 'tag' column exists in df_temp before using isin
+            if 'tag' in df_temp.columns:
+                df_temp.loc[df_temp["tag"].isin(preferensi_tag), "score"] += 2
         if preferensi_kat:
-            df_temp.loc[df_temp["category"].isin(preferensi_kat), "score"] += 1
+            # Check if 'category' column exists in df_temp before using isin
+            if 'category' in df_temp.columns:
+                df_temp.loc[df_temp["category"].isin(preferensi_kat), "score"] += 1
 
         hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
         return hasil.head(10)
     else:
-        return df.sample(10)
+        return df.sample(10) # Fallback to random if no history
 
 # === Fungsi untuk Menampilkan Game dengan Format Kartu ===
 def tampilkan_game(hasil):
+    if hasil.empty:
+        st.write("Tidak ada game yang ditemukan berdasarkan kriteria yang dipilih.")
+        return
+
     for i, row in hasil.iterrows():
         nama = row.get('name', 'Tidak ada nama')
         deskripsi = row.get('deskripsi', row.get('description', 'Deskripsi tidak tersedia.'))
@@ -66,6 +81,9 @@ def tampilkan_game(hasil):
         tag = row.get('tag', '-')
         kategori = row.get('category', '-')
         gambar = row.get('img', '')
+
+        if pd.isna(gambar) or not isinstance(gambar, str) or not gambar.startswith("http"):
+            gambar = "https://via.placeholder.com/180x100.png?text=No+Image"
 
         st.markdown(f"""
         <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222;">
@@ -99,15 +117,14 @@ elif halaman == "Penjelasan Metode":
 # === Halaman Rekomendasi Genre ===
 elif halaman == "Rekomendasi Genre":
     st.title("🎯 Rekomendasi Berdasarkan Genre")
-    st.subheader("10 Game Rekomendasi Umum Berdasarkan Genre")
-    tampilkan_game(df.sample(10))
 
-    st.subheader("Pilih Genre:")
     daftar_genre = df['genre'].dropna().unique().tolist()
     genre_pilihan = st.selectbox("Pilih genre sebagai filter awal:", sorted(daftar_genre))
 
     if genre_pilihan:
-        st.session_state.history['genre'].append(genre_pilihan)
+        # Add to history only if not already present to avoid redundant entries
+        if genre_pilihan not in st.session_state.history['genre']:
+            st.session_state.history['genre'].append(genre_pilihan)
         hasil = df[df['genre'] == genre_pilihan]
         st.markdown("### Rekomendasi Game berdasarkan genre")
         tampilkan_game(hasil)
@@ -115,15 +132,14 @@ elif halaman == "Rekomendasi Genre":
 # === Halaman Rekomendasi Tag ===
 elif halaman == "Rekomendasi Tag":
     st.title("🏷️ Rekomendasi Berdasarkan Tag")
-    st.subheader("10 Game Rekomendasi Umum Berdasarkan Tag")
-    tampilkan_game(df.sample(10))
 
-    st.subheader("Pilih Tag:")
     daftar_tag = df['tag'].dropna().unique().tolist()
     tag_pilihan = st.selectbox("Pilih tag sebagai filter awal:", sorted(daftar_tag))
 
     if tag_pilihan:
-        st.session_state.history['tag'].append(tag_pilihan)
+        # Add to history only if not already present to avoid redundant entries
+        if tag_pilihan not in st.session_state.history['tag']:
+            st.session_state.history['tag'].append(tag_pilihan)
         hasil = df[df['tag'] == tag_pilihan]
         st.markdown("### Rekomendasi Game berdasarkan tag")
         tampilkan_game(hasil)
@@ -131,15 +147,14 @@ elif halaman == "Rekomendasi Tag":
 # === Halaman Rekomendasi Kategori ===
 elif halaman == "Rekomendasi Kategori":
     st.title("📂 Rekomendasi Berdasarkan Kategori")
-    st.subheader("10 Game Rekomendasi Umum Berdasarkan Kategori")
-    tampilkan_game(df.sample(10))
 
-    st.subheader("Pilih Kategori:")
     daftar_kategori = df['category'].dropna().unique().tolist()
     kategori_pilihan = st.selectbox("Pilih kategori sebagai filter awal:", sorted(daftar_kategori))
 
     if kategori_pilihan:
-        st.session_state.history['category'].append(kategori_pilihan)
+        # Add to history only if not already present to avoid redundant entries
+        if kategori_pilihan not in st.session_state.history['category']:
+            st.session_state.history['category'].append(kategori_pilihan)
         hasil = df[df['category'] == kategori_pilihan]
         st.markdown("### Rekomendasi Game berdasarkan kategori")
         tampilkan_game(hasil)
