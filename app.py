@@ -76,7 +76,7 @@ def load_data():
         return pd.DataFrame()
 
     if not df.empty:
-        st.sidebar.subheader("Pra-pemrosesan Data:") # Subheader ini juga bisa disembunyikan jika mau
+        st.sidebar.subheader("") # Subheader ini juga bisa disembunyikan jika mau
 
         # Penghapusan Duplikat
         if 'name' in df.columns:
