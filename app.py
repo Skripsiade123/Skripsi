@@ -3,6 +3,7 @@ import pandas as pd
 import zipfile
 import os
 import joblib
+from collections import deque # For fixed-size history if desired
 
 # --- Configuration ---
 DATA_DIR = "data"
@@ -11,7 +12,8 @@ SVM_MODEL_GENRE = "svm_model.pkl"
 SVM_MODEL_TAG = "svm_model_tags.pkl"
 SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
-DISPLAY_LIMIT = 10 # Define the limit for displayed games
+DISPLAY_LIMIT = 10 # Limit for games displayed on a page
+VIEWED_HISTORY_LIMIT = 20 # Limit for how many unique games to store in viewed history
 
 # --- Helper Functions ---
 
@@ -70,7 +72,6 @@ def load_data():
             st.sidebar.warning("Column 'short description' not found. Game descriptions might be missing.")
 
         # Handle Missing 'Genre', 'Tags', 'Categories', 'Header Image', 'Positive Reviews'
-        # Added 'positive reviews' here for initial recommendation logic
         for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews']:
             if col in df.columns:
                 df[col] = df[col].fillna('') # Fill NaN with empty string or 0 for numeric columns
@@ -101,13 +102,12 @@ def load_svm_models():
         st.error(f"Error loading SVM models: {e}. Please check your model files.")
         st.stop()
 
-def get_recommendations_from_history(data_df):
-    """Generates game recommendations based on user's history."""
+def get_recommendations_based_on_preferences(data_df):
+    """Generates game recommendations based on user's selected genre/tag/category history."""
     preferensi_genre = st.session_state.history["genre"]
     preferensi_tag = st.session_state.history["tag"]
     preferensi_kat = st.session_state.history["category"]
 
-    # Check if history exists
     if preferensi_genre or preferensi_tag or preferensi_kat:
         df_temp = data_df.copy()
         df_temp["score"] = 0
@@ -124,17 +124,13 @@ def get_recommendations_from_history(data_df):
                 df_temp.loc[df_temp["categories"].str.contains(pref_k, case=False, na=False), "score"] += 1
 
         hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
-        return hasil.head(DISPLAY_LIMIT) # Apply limit here
+        return hasil.head(DISPLAY_LIMIT)
     else:
-        # Initial recommendation logic (e.g., for "Beranda" when no history)
-        if not data_df.empty and 'positive reviews' in data_df.columns:
-            # Sort by positive reviews in descending order
-            return data_df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
-        else:
-            return pd.DataFrame() # Return empty if no data or no 'positive reviews'
+        # Fallback if no preference history exists for personalized recommendation
+        return pd.DataFrame() # Return empty DataFrame, as initial display is handled separately
 
 def display_game_card(game_row):
-    """Displays a single game's information in a structured card format."""
+    """Displays a single game's information in a structured card format and adds to viewed history."""
     nama = game_row.get('name', 'Tidak ada nama').strip()
     short_description = game_row.get('short description', 'Deskripsi tidak tersedia.').strip()
     if not short_description:
@@ -168,15 +164,23 @@ def display_game_card(game_row):
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Add game to viewed history if it has a name
+    if nama != 'Tidak ada nama' and nama not in st.session_state.viewed_games:
+        st.session_state.viewed_games.append(nama)
+        # Keep the history limited
+        if len(st.session_state.viewed_games) > VIEWED_HISTORY_LIMIT:
+            st.session_state.viewed_games.pop(0) # Remove oldest
 
 def display_recommendations(data_df, title, recommendations_df):
     """Displays a title and a list of game recommendations, applying the display limit."""
-    if title: # Only display subheader if title is provided
+    if title:
         st.subheader(title)
+    
     if recommendations_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
-        # Apply the display limit here as well, for consistency
+        # Apply the display limit here if not already applied
         display_df = recommendations_df.head(DISPLAY_LIMIT)
         for _, row in display_df.iterrows():
             display_game_card(row)
@@ -187,9 +191,11 @@ def display_recommendations(data_df, title, recommendations_df):
 df = load_data()
 model_genre, model_tag, model_category = load_svm_models()
 
-# Initialize session state for history
+# Initialize session state for history and viewed games
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
+if "viewed_games" not in st.session_state:
+    st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT) # Using deque for fixed-size history
 
 # Sidebar Navigation
 st.sidebar.title("Navigasi")
@@ -202,25 +208,26 @@ if halaman == "Beranda":
     st.write("Selamat datang! Dapatkan rekomendasi game personal berdasarkan histori pilihan Anda. Semakin banyak Anda memilih genre, tag, atau kategori, semakin akurat rekomendasi yang diberikan.")
     
     st.markdown("---")
-    st.header("Rekomendasi Game Berdasarkan Histori Anda")
+    st.header("Rekomendasi Game")
     
-    # Check if history is truly empty
-    is_history_empty = not (st.session_state.history["genre"] or 
-                            st.session_state.history["tag"] or 
-                            st.session_state.history["category"])
+    # Check if preference history is truly empty (for initial recommendation logic)
+    is_preference_history_empty = not (st.session_state.history["genre"] or 
+                                       st.session_state.history["tag"] or 
+                                       st.session_state.history["category"])
 
-    if is_history_empty:
-        # Initial display: Top 10 by Positive Reviews if no history
-        st.info("Anda belum memiliki histori pilihan. Berikut adalah game dengan review positif terbanyak:")
-        if 'positive reviews' in df.columns:
+    if is_preference_history_empty:
+        # Initial display: Top by Positive Reviews if no preference history
+        st.info("Anda belum memiliki histori preferensi genre/tag/kategori. Berikut adalah game dengan review positif terbanyak:")
+        if 'positive reviews' in df.columns and not df.empty:
             rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
-            rekomendasi = pd.DataFrame() # No 'positive reviews' column
+            rekomendasi = pd.DataFrame() # No 'positive reviews' column or empty df
     else:
-        # If history exists, use the history-based recommendation
-        rekomendasi = get_recommendations_from_history(df)
+        # If preference history exists, use the history-based recommendation
+        st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda sebelumnya:")
+        rekomendasi = get_recommendations_based_on_preferences(df)
 
-    display_recommendations(df, "", rekomendasi) # Title passed as empty string, as header is above
+    display_recommendations(df, "", rekomendasi)
 
 elif halaman == "Penjelasan Metode":
     st.title("📚 Penjelasan Metode")
@@ -264,8 +271,8 @@ elif halaman == "Rekomendasi Genre":
         if genre_pilihan != "Pilih Genre":
             if genre_pilihan not in st.session_state.history['genre']:
                 st.session_state.history['genre'].append(genre_pilihan)
-            hasil = df[df['genre'].str.contains(genre_pilihan, case=False, na=False)].head(DISPLAY_LIMIT) # Apply limit here
-            display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil)
+            hasil = df[df['genre'].str.contains(genre_pilihan, case=False, na=False)] # Filter first
+            display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil) # Limit applied in display_recommendations
         else:
             st.info("Pilih genre dari daftar di atas untuk melihat rekomendasi.")
 
@@ -288,8 +295,8 @@ elif halaman == "Rekomendasi Tag":
         if tag_pilihan != "Pilih Tag":
             if tag_pilihan not in st.session_state.history['tag']:
                 st.session_state.history['tag'].append(tag_pilihan)
-            hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)].head(DISPLAY_LIMIT) # Apply limit here
-            display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil)
+            hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)] # Filter first
+            display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil) # Limit applied in display_recommendations
         else:
             st.info("Pilih tag dari daftar di atas untuk melihat rekomendasi.")
 
@@ -311,51 +318,65 @@ elif halaman == "Rekomendasi Kategori":
         if kategori_pilihan != "Pilih Kategori":
             if kategori_pilihan not in st.session_state.history['category']:
                 st.session_state.history['category'].append(kategori_pilihan)
-            hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)].head(DISPLAY_LIMIT) # Apply limit here
-            display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil)
+            hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)] # Filter first
+            display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil) # Limit applied in display_recommendations
         else:
             st.info("Pilih kategori dari daftar di atas untuk melihat rekomendasi.")
 
 elif halaman == "Histori Pilihan":
-    st.title("🕒 Histori Pilihan Anda")
-    st.write("Lihat genre, tag, dan kategori yang telah Anda pilih. Ini membantu sistem merekomendasikan game yang lebih sesuai untuk Anda.")
+    st.title("🕒 Histori Game yang Dilihat")
+    st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
+    if st.session_state.viewed_games:
+        st.subheader("Game Terakhir Dilihat:")
+        # Reverse to show most recent first
+        for game_name in reversed(list(st.session_state.viewed_games)):
+            # Find the game's details from the main DataFrame
+            game_details = df[df['name'] == game_name]
+            if not game_details.empty:
+                display_game_card(game_details.iloc[0]) # Display the card for the game
+            else:
+                st.markdown(f"- {game_name} (Detail tidak ditemukan)") # Fallback if game details are gone
+    else:
+        st.info("Anda belum melihat game apa pun. Jelajahi rekomendasi untuk memulai!")
+
+    st.markdown("---")
+    st.subheader("Bersihkan Histori Game")
+    if st.button("Bersihkan Semua Histori Game yang Dilihat"):
+        st.session_state.viewed_games.clear()
+        st.success("Histori game yang dilihat telah dibersihkan!")
+        st.rerun()
+
+    st.markdown("---")
+    st.subheader("Preferensi Rekomendasi Tersimpan (untuk algoritma)")
+    st.write("Sistem menggunakan preferensi ini untuk memberikan rekomendasi personal:")
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.subheader("Histori Genre")
+        st.markdown("**Genre:**")
         if st.session_state.history["genre"]:
-            for i, genre in enumerate(st.session_state.history["genre"]):
-                st.markdown(f"- {genre}")
+            for g in st.session_state.history["genre"]:
+                st.markdown(f"- {g}")
         else:
-            st.info("Anda belum memilih genre apa pun.")
+            st.markdown("- Tidak ada")
 
     with col2:
-        st.subheader("Histori Tag")
+        st.markdown("**Tag:**")
         if st.session_state.history["tag"]:
-            for i, tag in enumerate(st.session_state.history["tag"]):
-                st.markdown(f"- {tag}")
+            for t in st.session_state.history["tag"]:
+                st.markdown(f"- {t}")
         else:
-            st.info("Anda belum memilih tag apa pun.")
+            st.markdown("- Tidak ada")
     
     with col3:
-        st.subheader("Histori Kategori")
+        st.markdown("**Kategori:**")
         if st.session_state.history["category"]:
-            for i, category in enumerate(st.session_state.history["category"]):
-                st.markdown(f"- {category}")
+            for c in st.session_state.history["category"]:
+                st.markdown(f"- {c}")
         else:
-            st.info("Anda belum memilih kategori apa pun.")
+            st.markdown("- Tidak ada")
 
-    st.markdown("---")
-    st.header("Rekomendasi Berdasarkan Kombinasi Histori")
-    st.write("Berikut adalah rekomendasi game yang disesuaikan berdasarkan seluruh histori pilihan Anda (genre, tag, dan kategori).")
-    
-    rekomendasi_histori_gabungan = get_recommendations_from_history(df)
-    display_recommendations(df, "", rekomendasi_histori_gabungan)
-
-    st.markdown("---")
-    st.subheader("Bersihkan Histori")
-    if st.button("Bersihkan Semua Histori Pilihan"):
+    if st.button("Bersihkan Preferensi Rekomendasi"):
         st.session_state.history = {"genre": [], "tag": [], "category": []}
-        st.success("Histori pilihan Anda telah dibersihkan!")
+        st.success("Preferensi rekomendasi telah dibersihkan!")
         st.rerun()
