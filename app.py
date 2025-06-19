@@ -4,7 +4,7 @@ import zipfile
 import os
 import joblib
 from collections import deque
-import math
+import math # Import math diperlukan untuk perhitungan pagination di fungsi yang lebih baru
 
 # --- Konfigurasi ---
 DATA_DIR = "data"
@@ -13,8 +13,8 @@ SVM_MODEL_GENRE = "svm_model.pkl"
 SVM_MODEL_TAG = "svm_model_tags.pkl"
 SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
-DISPLAY_LIMIT = 10 # Batas untuk game yang ditampilkan di satu halaman
-VIEWED_HISTORY_LIMIT = 20 # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
+DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
+VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 # --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan sidebar ---
 hide_streamlit_style = """
@@ -30,7 +30,7 @@ hide_streamlit_style = """
     h3:contains("Pra-pemrosesan Data:") {
         display: none !important;
     }
-    .stAlert[data-testid="stSidebar"] {
+    .stAlert[data-testid="stSidebar"] { /* Ini menargetkan spesifik alert di sidebar, tapi .stAlert lebih umum */
         display: none !important;
     }
     </style>
@@ -44,11 +44,11 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
     if not os.path.exists(DATA_DIR):
-        # st.info(f"Mengekstrak {ZIP_FILE_NAME}...") # Pesan ini akan tetap disembunyikan
+        st.info(f"Mengekstrak {ZIP_FILE_NAME}...")  # Pesan ini akan tetap disembunyikan
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
                 zip_ref.extractall(DATA_DIR)
-            # st.success("Dataset berhasil diekstrak!") # Pesan ini akan tetap disembunyikan
+            st.success("Dataset berhasil diekstrak!")  # Pesan ini akan tetap disembunyikan
         except FileNotFoundError:
             st.error(f"Error: {ZIP_FILE_NAME} tidak ditemukan. Pastikan file berada di direktori yang sama dengan skrip.")
             st.stop()
@@ -60,17 +60,15 @@ def load_data():
     csv_found = False
     for root, dirs, files in os.walk(DATA_DIR):
         for file in files:
-            # Mencari file CSV yang nama nya mengandung 'dataset' atau 'data'
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
                     df = pd.read_csv(os.path.join(root, file))
-                    df.columns = df.columns.str.strip().str.lower() # Normalisasi nama kolom
+                    df.columns = df.columns.str.strip().str.lower()  # Normalisasi nama kolom
                     csv_found = True
-                    # st.sidebar.success(f"Dataset '{file}' berhasil dimuat.") # Pesan ini akan tetap disembunyikan
+                    st.sidebar.success(f"Dataset '{file}' berhasil dimuat.")  # Pesan ini akan tetap disembunyikan
                     break
                 except Exception as e:
-                    # st.sidebar.error(f"Error saat memuat CSV '{file}': {e}") # Pesan ini akan tetap disembunyikan
-                    pass # Biarkan silent karena CSS menyembunyikan ini
+                    st.sidebar.error(f"Error saat memuat CSV '{file}': {e}")  # Pesan ini akan tetap disembunyikan
         if csv_found:
             break
 
@@ -79,37 +77,32 @@ def load_data():
         return pd.DataFrame()
 
     if not df.empty:
-        # st.sidebar.subheader("") # Subheader ini juga bisa disembunyikan jika mau
+        st.sidebar.subheader("")  # Subheader ini juga bisa disembunyikan jika mau
 
         # Penghapusan Duplikat
         if 'name' in df.columns:
             initial_rows = len(df)
             df.drop_duplicates(subset=['name'], inplace=True, keep='first')
             if initial_rows - len(df) > 0:
-                # st.sidebar.info(f"Menghapus {initial_rows - len(df)} entri game duplikat berdasarkan 'name'.") # Pesan ini akan tetap disembunyikan
-                pass
+                st.sidebar.info(f"Menghapus {initial_rows - len(df)} entri game duplikat berdasarkan 'name'.")  # Pesan ini akan tetap disembunyikan
         else:
-            # st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.") # Pesan ini akan tetap disembunyikan
-            pass
+            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.")  # Pesan ini akan tetap disembunyikan
 
         # Menangani Deskripsi Singkat yang Hilang
         if 'short description' in df.columns:
             df['short description'] = df['short description'].fillna('Deskripsi tidak tersedia.')
         else:
-            # st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.") # Pesan ini akan tetap disembunyikan
-            pass
+            st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.")  # Pesan ini akan tetap disembunyikan
 
         # Menangani Genre, Tags, Categories, Header Image, Positive Reviews yang Hilang
         for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews']:
             if col in df.columns:
                 df[col] = df[col].fillna('')
                 if col == 'positive reviews':
-                    # Konversi ke numerik, ganti non-numerik dengan NaN, lalu isi NaN dengan 0
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
-                # st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.") # Pesan ini akan tetap disembunyikan
-                pass
-        
+                st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")  # Pesan ini akan tetap disembunyikan
+
         # Pastikan URL gambar valid
         if 'header image' in df.columns:
             df['header image'] = df['header image'].apply(lambda x: x if (isinstance(x, str) and x.startswith("http")) else "")
@@ -123,7 +116,7 @@ def load_svm_models():
         model_genre = joblib.load(SVM_MODEL_GENRE)
         model_tag = joblib.load(SVM_MODEL_TAG)
         model_category = joblib.load(SVM_MODEL_CATEGORY)
-        # st.sidebar.success("Model SVM berhasil dimuat.") # Pesan ini akan tetap disembunyikan
+        st.sidebar.success("Model SVM berhasil dimuat.")  # Pesan ini akan tetap disembunyikan
         return model_genre, model_tag, model_category
     except FileNotFoundError:
         st.error(f"Satu atau lebih file model ({SVM_MODEL_GENRE}, {SVM_MODEL_TAG}, {SVM_MODEL_CATEGORY}) tidak ditemukan. Pastikan file berada di direktori yang sama.")
@@ -154,7 +147,7 @@ def get_recommendations_based_on_preferences(data_df):
                 df_temp.loc[df_temp["categories"].str.contains(pref_k, case=False, na=False), "score"] += 1
 
         hasil = df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False)
-        return hasil
+        return hasil.head(DISPLAY_LIMIT) # Kode asli Anda masih membatasi di sini.
     else:
         return pd.DataFrame()
 
@@ -193,77 +186,22 @@ def display_game_card(game_row):
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     # Tambahkan game ke histori yang dilihat jika memiliki nama
     if nama != 'Tidak ada nama' and nama not in st.session_state.viewed_games:
         st.session_state.viewed_games.append(nama)
 
-def display_recommendations(data_df, title, recommendations_df, page_key_prefix="page"):
-    """
-    Menampilkan judul dan daftar rekomendasi game dengan pagination.
-    
-    Args:
-        data_df (pd.DataFrame): DataFrame utama data game. (Tidak langsung digunakan di sini, tapi bisa untuk future-proofing)
-        title (str): Judul bagian rekomendasi.
-        recommendations_df (pd.DataFrame): DataFrame rekomendasi yang akan ditampilkan.
-        page_key_prefix (str): Prefix unik untuk session state key pagination.
-    """
+def display_recommendations(data_df, title, recommendations_df):
+    """Menampilkan judul dan daftar rekomendasi game, menerapkan batas tampilan."""
     if title:
         st.subheader(title)
-    
-    total_games = len(recommendations_df)
-    total_pages = math.ceil(total_games / DISPLAY_LIMIT)
-
-    # Inisialisasi halaman saat ini di session_state jika belum ada
-    current_page_key = f"{page_key_prefix}_current_page"
-    if current_page_key not in st.session_state:
-        st.session_state[current_page_key] = 1
-    
-    # Pastikan halaman saat ini tidak melebihi total halaman (setelah filter/perubahan data)
-    if st.session_state[current_page_key] > total_pages and total_pages > 0:
-        st.session_state[current_page_key] = total_pages
-    elif total_pages == 0: # Jika tidak ada game sama sekali, reset ke halaman 1
-        st.session_state[current_page_key] = 1
 
     if recommendations_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
-        # Hitung indeks awal dan akhir untuk halaman saat ini
-        start_idx = (st.session_state[current_page_key] - 1) * DISPLAY_LIMIT
-        end_idx = start_idx + DISPLAY_LIMIT
-        
-        display_df = recommendations_df.iloc[start_idx:end_idx]
-        
+        display_df = recommendations_df.head(DISPLAY_LIMIT)
         for _, row in display_df.iterrows():
             display_game_card(row)
-
-        # Pagination controls
-        if total_pages > 1:
-            st.markdown("---") # Garis pemisah sebelum kontrol halaman
-            col1, col2, col3 = st.columns([1, 2, 1])
-            
-            with col1:
-                if st.session_state[current_page_key] > 1: # Tombol "Sebelumnya" hanya jika bukan halaman pertama
-                    if st.button("⬅️ Sebelumnya", key=f"{page_key_prefix}_prev_btn"):
-                        st.session_state[current_page_key] -= 1
-                        st.rerun()
-                else:
-                    st.empty() # Kosongkan ruang jika tombol tidak muncul
-            
-            with col2:
-                # Pusatkan teks halaman
-                st.markdown(f"<p style='text-align: center; color: white;'>Halaman {st.session_state[current_page_key]} dari {total_pages}</p>", unsafe_allow_html=True)
-            
-            with col3:
-                if st.session_state[current_page_key] < total_pages: # Tombol "Berikutnya" hanya jika bukan halaman terakhir
-                    if st.button("Berikutnya ➡️", key=f"{page_key_prefix}_next_btn"):
-                        st.session_state[current_page_key] += 1
-                        st.rerun()
-                else:
-                    st.empty() # Kosongkan ruang jika tombol tidak muncul
-        elif total_pages == 1 and total_games > 0:
-            st.info(f"Menampilkan semua {total_games} game yang ditemukan di satu halaman.")
-
 
 # --- Logika Utama Aplikasi ---
 
@@ -286,27 +224,25 @@ halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "R
 if halaman == "Beranda":
     st.title("🎮 Rekomendasi Game untuk Anda")
     st.write("Selamat datang! Dapatkan rekomendasi game berdasarkan histori pilihan Anda.")
-    
+
     st.markdown("---")
     st.header("Rekomendasi Game")
-    
-    is_preference_history_empty = not (st.session_state.history["genre"] or 
-                                       st.session_state.history["tag"] or 
+
+    is_preference_history_empty = not (st.session_state.history["genre"] or
+                                       st.session_state.history["tag"] or
                                        st.session_state.history["category"])
 
     if is_preference_history_empty:
         st.info("Anda belum memiliki histori preferensi genre/tag/kategori. Berikut adalah game dengan review positif terbanyak:")
         if 'positive reviews' in df.columns and not df.empty:
-            rekomendasi = df.sort_values(by='positive reviews', ascending=False)
+            rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
             rekomendasi = pd.DataFrame()
-        st.write(f"**DEBUG:** Total game direkomendasikan (Beranda - Review Positif): {len(rekomendasi)}") # DEBUG LINE
-        display_recommendations(df, "", rekomendasi, page_key_prefix="home_page")
     else:
         st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda sebelumnya:")
         rekomendasi = get_recommendations_based_on_preferences(df)
-        st.write(f"**DEBUG:** Total game direkomendasikan (Beranda - Preferensi): {len(rekomendasi)}") # DEBUG LINE
-        display_recommendations(df, "", rekomendasi, page_key_prefix="pref_page")
+
+    display_recommendations(df, "", rekomendasi)
 
 elif halaman == "Penjelasan Metode":
     st.title("📚 Penjelasan Metode")
@@ -319,7 +255,7 @@ elif halaman == "Penjelasan Metode":
     Anda mungkin bertanya, "Mengapa hanya SVM, tidak termasuk TF-IDF?"
     **TF-IDF (Term Frequency-Inverse Document Frequency) sebenarnya adalah bagian integral dari proses ini, meskipun tidak secara eksplisit dimuat sebagai model terpisah di sini.**
     """)
-    
+
     st.write("""
     * **TF-IDF** adalah teknik *ekstraksi fitur* yang digunakan untuk mengubah teks mentah (seperti deskripsi game) menjadi representasi numerik yang dapat dipahami oleh algoritma Machine Learning. Tanpa mengubah teks menjadi angka, model seperti SVM tidak akan bisa memprosesnya.
     * Prosesnya adalah sebagai berikut:
@@ -341,24 +277,17 @@ elif halaman == "Rekomendasi Genre":
             for g in str(genres_str).split(','):
                 all_genres.add(g.strip())
     daftar_genre = sorted(list(all_genres))
-    
+
     if not daftar_genre:
         st.warning("Tidak ada genre yang ditemukan di dataset.")
     else:
         genre_pilihan = st.selectbox("Pilih genre sebagai filter awal:", ["Pilih Genre"] + daftar_genre)
 
         if genre_pilihan != "Pilih Genre":
-            # Reset halaman ke 1 saat pilihan genre berubah
-            if st.session_state.get("last_genre_choice") != genre_pilihan:
-                st.session_state["genre_page_current_page"] = 1
-                st.session_state["last_genre_choice"] = genre_pilihan
-
             if genre_pilihan not in st.session_state.history['genre']:
                 st.session_state.history['genre'].append(genre_pilihan)
-            
             hasil = df[df['genre'].str.contains(genre_pilihan, case=False, na=False)]
-            st.write(f"**DEBUG:** Total game direkomendasikan (Genre: '{genre_pilihan}'): {len(hasil)}") # DEBUG LINE
-            display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil, page_key_prefix="genre_page")
+            display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil)
         else:
             st.info("Pilih genre dari daftar di atas untuk melihat rekomendasi.")
 
@@ -379,17 +308,10 @@ elif halaman == "Rekomendasi Tag":
         tag_pilihan = st.selectbox("Pilih tag sebagai filter awal:", ["Pilih Tag"] + daftar_tag)
 
         if tag_pilihan != "Pilih Tag":
-            # Reset halaman ke 1 saat pilihan tag berubah
-            if st.session_state.get("last_tag_choice") != tag_pilihan:
-                st.session_state["tag_page_current_page"] = 1
-                st.session_state["last_tag_choice"] = tag_pilihan
-
             if tag_pilihan not in st.session_state.history['tag']:
                 st.session_state.history['tag'].append(tag_pilihan)
-            
             hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)]
-            st.write(f"**DEBUG:** Total game direkomendasikan (Tag: '{tag_pilihan}'): {len(hasil)}") # DEBUG LINE
-            display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil, page_key_prefix="tag_page")
+            display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil)
         else:
             st.info("Pilih tag dari daftar di atas untuk melihat rekomendasi.")
 
@@ -409,17 +331,10 @@ elif halaman == "Rekomendasi Kategori":
         kategori_pilihan = st.selectbox("Pilih kategori sebagai filter awal:", ["Pilih Kategori"] + daftar_kategori)
 
         if kategori_pilihan != "Pilih Kategori":
-            # Reset halaman ke 1 saat pilihan kategori berubah
-            if st.session_state.get("last_category_choice") != kategori_pilihan:
-                st.session_state["category_page_current_page"] = 1
-                st.session_state["last_category_choice"] = kategori_pilihan
-
             if kategori_pilihan not in st.session_state.history['category']:
                 st.session_state.history['category'].append(kategori_pilihan)
-            
             hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)]
-            st.write(f"**DEBUG:** Total game direkomendasikan (Kategori: '{kategori_pilihan}'): {len(hasil)}") # DEBUG LINE
-            display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil, page_key_prefix="category_page")
+            display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil)
         else:
             st.info("Pilih kategori dari daftar di atas untuk melihat rekomendasi.")
 
@@ -428,13 +343,12 @@ elif halaman == "Histori":
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
     if st.session_state.viewed_games:
-        # Menampilkan yang terbaru terlebih dahulu
-        for game_name in reversed(list(st.session_state.viewed_games)): 
+        for game_name in reversed(list(st.session_state.viewed_games)):
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
                 display_game_card(game_details.iloc[0])
             else:
-                st.markdown(f"- **{game_name}** (Detail tidak ditemukan di dataset utama)")
+                st.markdown(f"- **{game_name}** (Detail tidak ditemukan)")
     else:
         st.info("Anda belum melihat game apa pun. Jelajahi rekomendasi untuk memulai!")
 
@@ -465,7 +379,7 @@ elif halaman == "Histori":
                 st.markdown(f"- {t}")
         else:
             st.markdown("- Tidak ada")
-    
+
     with col3:
         st.markdown("**Kategori:**")
         if st.session_state.history["category"]:
