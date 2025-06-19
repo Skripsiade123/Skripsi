@@ -4,7 +4,7 @@ import zipfile
 import os
 import joblib
 from collections import deque
-import math # Import math untuk perhitungan halaman
+import math
 
 # --- Konfigurasi ---
 DATA_DIR = "data"
@@ -60,6 +60,7 @@ def load_data():
     csv_found = False
     for root, dirs, files in os.walk(DATA_DIR):
         for file in files:
+            # Mencari file CSV yang nama nya mengandung 'dataset' atau 'data'
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
                     df = pd.read_csv(os.path.join(root, file))
@@ -103,6 +104,7 @@ def load_data():
             if col in df.columns:
                 df[col] = df[col].fillna('')
                 if col == 'positive reviews':
+                    # Konversi ke numerik, ganti non-numerik dengan NaN, lalu isi NaN dengan 0
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
                 # st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.") # Pesan ini akan tetap disembunyikan
@@ -201,7 +203,7 @@ def display_recommendations(data_df, title, recommendations_df, page_key_prefix=
     Menampilkan judul dan daftar rekomendasi game dengan pagination.
     
     Args:
-        data_df (pd.DataFrame): DataFrame utama data game.
+        data_df (pd.DataFrame): DataFrame utama data game. (Tidak langsung digunakan di sini, tapi bisa untuk future-proofing)
         title (str): Judul bagian rekomendasi.
         recommendations_df (pd.DataFrame): DataFrame rekomendasi yang akan ditampilkan.
         page_key_prefix (str): Prefix unik untuk session state key pagination.
@@ -215,6 +217,12 @@ def display_recommendations(data_df, title, recommendations_df, page_key_prefix=
     # Inisialisasi halaman saat ini di session_state jika belum ada
     current_page_key = f"{page_key_prefix}_current_page"
     if current_page_key not in st.session_state:
+        st.session_state[current_page_key] = 1
+    
+    # Pastikan halaman saat ini tidak melebihi total halaman (setelah filter/perubahan data)
+    if st.session_state[current_page_key] > total_pages and total_pages > 0:
+        st.session_state[current_page_key] = total_pages
+    elif total_pages == 0: # Jika tidak ada game sama sekali, reset ke halaman 1
         st.session_state[current_page_key] = 1
 
     if recommendations_df.empty:
@@ -231,22 +239,31 @@ def display_recommendations(data_df, title, recommendations_df, page_key_prefix=
 
         # Pagination controls
         if total_pages > 1:
+            st.markdown("---") # Garis pemisah sebelum kontrol halaman
             col1, col2, col3 = st.columns([1, 2, 1])
             
             with col1:
-                if st.button("⬅️ Sebelumnya", key=f"{page_key_prefix}_prev_btn"):
-                    if st.session_state[current_page_key] > 1:
+                if st.session_state[current_page_key] > 1: # Tombol "Sebelumnya" hanya jika bukan halaman pertama
+                    if st.button("⬅️ Sebelumnya", key=f"{page_key_prefix}_prev_btn"):
                         st.session_state[current_page_key] -= 1
                         st.rerun()
+                else:
+                    st.empty() # Kosongkan ruang jika tombol tidak muncul
             
             with col2:
-                st.write(f"Halaman {st.session_state[current_page_key]} dari {total_pages}")
+                # Pusatkan teks halaman
+                st.markdown(f"<p style='text-align: center; color: white;'>Halaman {st.session_state[current_page_key]} dari {total_pages}</p>", unsafe_allow_html=True)
             
             with col3:
-                if st.button("Berikutnya ➡️", key=f"{page_key_prefix}_next_btn"):
-                    if st.session_state[current_page_key] < total_pages:
+                if st.session_state[current_page_key] < total_pages: # Tombol "Berikutnya" hanya jika bukan halaman terakhir
+                    if st.button("Berikutnya ➡️", key=f"{page_key_prefix}_next_btn"):
                         st.session_state[current_page_key] += 1
                         st.rerun()
+                else:
+                    st.empty() # Kosongkan ruang jika tombol tidak muncul
+        elif total_pages == 1 and total_games > 0:
+            st.info(f"Menampilkan semua {total_games} game yang ditemukan di satu halaman.")
+
 
 # --- Logika Utama Aplikasi ---
 
@@ -280,14 +297,16 @@ if halaman == "Beranda":
     if is_preference_history_empty:
         st.info("Anda belum memiliki histori preferensi genre/tag/kategori. Berikut adalah game dengan review positif terbanyak:")
         if 'positive reviews' in df.columns and not df.empty:
-            rekomendasi = df.sort_values(by='positive reviews', ascending=False) # Hapus .head(DISPLAY_LIMIT)
+            rekomendasi = df.sort_values(by='positive reviews', ascending=False)
         else:
             rekomendasi = pd.DataFrame()
-        display_recommendations(df, "", rekomendasi, page_key_prefix="home_page") # Tambahkan page_key_prefix
+        st.write(f"**DEBUG:** Total game direkomendasikan (Beranda - Review Positif): {len(rekomendasi)}") # DEBUG LINE
+        display_recommendations(df, "", rekomendasi, page_key_prefix="home_page")
     else:
         st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda sebelumnya:")
         rekomendasi = get_recommendations_based_on_preferences(df)
-        display_recommendations(df, "", rekomendasi, page_key_prefix="pref_page") # Tambahkan page_key_prefix
+        st.write(f"**DEBUG:** Total game direkomendasikan (Beranda - Preferensi): {len(rekomendasi)}") # DEBUG LINE
+        display_recommendations(df, "", rekomendasi, page_key_prefix="pref_page")
 
 elif halaman == "Penjelasan Metode":
     st.title("📚 Penjelasan Metode")
@@ -330,10 +349,15 @@ elif halaman == "Rekomendasi Genre":
 
         if genre_pilihan != "Pilih Genre":
             # Reset halaman ke 1 saat pilihan genre berubah
-            st.session_state["genre_page_current_page"] = 1 
+            if st.session_state.get("last_genre_choice") != genre_pilihan:
+                st.session_state["genre_page_current_page"] = 1
+                st.session_state["last_genre_choice"] = genre_pilihan
+
             if genre_pilihan not in st.session_state.history['genre']:
                 st.session_state.history['genre'].append(genre_pilihan)
+            
             hasil = df[df['genre'].str.contains(genre_pilihan, case=False, na=False)]
+            st.write(f"**DEBUG:** Total game direkomendasikan (Genre: '{genre_pilihan}'): {len(hasil)}") # DEBUG LINE
             display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil, page_key_prefix="genre_page")
         else:
             st.info("Pilih genre dari daftar di atas untuk melihat rekomendasi.")
@@ -356,10 +380,15 @@ elif halaman == "Rekomendasi Tag":
 
         if tag_pilihan != "Pilih Tag":
             # Reset halaman ke 1 saat pilihan tag berubah
-            st.session_state["tag_page_current_page"] = 1
+            if st.session_state.get("last_tag_choice") != tag_pilihan:
+                st.session_state["tag_page_current_page"] = 1
+                st.session_state["last_tag_choice"] = tag_pilihan
+
             if tag_pilihan not in st.session_state.history['tag']:
                 st.session_state.history['tag'].append(tag_pilihan)
+            
             hasil = df[df['tags'].str.contains(tag_pilihan, case=False, na=False)]
+            st.write(f"**DEBUG:** Total game direkomendasikan (Tag: '{tag_pilihan}'): {len(hasil)}") # DEBUG LINE
             display_recommendations(df, f"Rekomendasi Game untuk Tag: {tag_pilihan}", hasil, page_key_prefix="tag_page")
         else:
             st.info("Pilih tag dari daftar di atas untuk melihat rekomendasi.")
@@ -381,10 +410,15 @@ elif halaman == "Rekomendasi Kategori":
 
         if kategori_pilihan != "Pilih Kategori":
             # Reset halaman ke 1 saat pilihan kategori berubah
-            st.session_state["category_page_current_page"] = 1
+            if st.session_state.get("last_category_choice") != kategori_pilihan:
+                st.session_state["category_page_current_page"] = 1
+                st.session_state["last_category_choice"] = kategori_pilihan
+
             if kategori_pilihan not in st.session_state.history['category']:
                 st.session_state.history['category'].append(kategori_pilihan)
+            
             hasil = df[df['categories'].str.contains(kategori_pilihan, case=False, na=False)]
+            st.write(f"**DEBUG:** Total game direkomendasikan (Kategori: '{kategori_pilihan}'): {len(hasil)}") # DEBUG LINE
             display_recommendations(df, f"Rekomendasi Game untuk Kategori: {kategori_pilihan}", hasil, page_key_prefix="category_page")
         else:
             st.info("Pilih kategori dari daftar di atas untuk melihat rekomendasi.")
@@ -394,14 +428,8 @@ elif halaman == "Histori":
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
     if st.session_state.viewed_games:
-        # Untuk histori, kita akan menampilkannya dengan cara yang sedikit berbeda
-        # Karena ini adalah deque, kita tidak perlu pagination kompleks
-        # Cukup tampilkan semua yang ada dalam deque (sesuai VIEWED_HISTORY_LIMIT)
-        # Atau jika ingin pagination juga, bisa diterapkan di sini
-        
-        # Untuk kesederhanaan, mari tampilkan semua dalam VIEWED_HISTORY_LIMIT
-        # Jika Anda ingin pagination di Histori juga, kita bisa menambahkannya kemudian.
-        for game_name in reversed(list(st.session_state.viewed_games)): # Menampilkan yang terbaru terlebih dahulu
+        # Menampilkan yang terbaru terlebih dahulu
+        for game_name in reversed(list(st.session_state.viewed_games)): 
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
                 display_game_card(game_details.iloc[0])
