@@ -17,6 +17,69 @@ DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 
+# --- Custom CSS: SEMBUNYIKAN KETERANGAN UI ATAS & PESAN INFO/SUCCESS, BIARKAN SIDEBAR UTUH ---
+hide_streamlit_style = """
+    <style>
+    /* 1. Menyembunyikan Menu Utama (hamburger), Footer, dan Header Streamlit */
+    #MainMenu {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    header { /* Ini adalah header Streamlit default di bagian paling atas */
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    /* 2. Menyembunyikan SEMUA pesan info/success/warning (Alerts/Balloons) */
+    /* Ini akan menyembunyikan pesan seperti "Mengekstrak Dataset.zip...", "Dataset berhasil diekstrak!",
+       "Dataset 'Dataset.csv' berhasil dimuat.", "Menghapus 261 entri game duplikat...",
+       "Model SVM berhasil dimuat.", baik di main content maupun di sidebar. */
+    .stAlert {
+        display: none !important;
+    }
+
+    /* 3. MENJAMIN SIDEBAR TETAP MUNCUL DAN TIDAK TERPENGARUH */
+    /* Aturan ini mengembalikan properti default untuk sidebar jika ada CSS lain yang menimpanya.
+       Ini adalah langkah defensif untuk memastikan sidebar selalu terlihat dan berfungsi. */
+    section[data-testid="stSidebar"] {
+        visibility: visible !important; /* Pastikan sidebar terlihat */
+        display: block !important;     /* Pastikan sidebar menggunakan display block normal */
+        width: 210px !important;       /* Atur lebar standar Streamlit sidebar, sesuaikan jika perlu */
+        left: 0px !important;          /* Pastikan tidak bergeser dari kiri layar */
+        transform: none !important;    /* Hapus transformasi yang mungkin menyembunyikan */
+        z-index: 9999 !important;      /* Pastikan sidebar berada di lapisan terdepan */
+    }
+
+    /* 4. Pastikan konten utama tidak tumpang tindih dengan sidebar */
+    /* Ini juga merupakan aturan defensif untuk memastikan area konten utama dimulai setelah sidebar */
+    .main {
+        padding-left: 210px !important; /* Sesuaikan dengan lebar sidebar */
+    }
+
+    /* 5. Mengatasi potensi elemen yang menyebabkan padding/margin tambahan di atas konten utama/sidebar */
+    /* Ini menargetkan class-class yang sering muncul di Streamlit Cloud yang menambah ruang kosong */
+    .stApp > header { /* Jika ada header yang berbeda di luar header umum */
+        display: none !important;
+    }
+    .css-1lcbmhc { /* Kontainer untuk beberapa elemen Streamlit */
+        margin-top: 0px !important; /* Menghilangkan margin atas */
+        padding-top: 0px !important; /* Menghilangkan padding atas */
+    }
+    .css-1d391kg { /* Kontainer lain yang mungkin menambah padding */
+        padding-top: 0px !important; /* Menghilangkan padding atas */
+    }
+    .css-1f198p6 { /* Ini juga sering muncul di Streamlit Cloud dan bisa menambah ruang kosong */
+        padding-top: 0px !important;
+    }
+
+
+    </style>
+    """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
