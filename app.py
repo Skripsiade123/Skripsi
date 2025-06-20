@@ -17,6 +17,81 @@ DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 
+# --- Custom CSS: SEMBUNYIKAN KETERANGAN UI ATAS & PESAN INFO/SUCCESS, BIARKAN SIDEBAR UTUH & LEBARKAN, DAN SEMBUNYIKAN TOMBOL LIPAT SIDEBAR ---
+hide_streamlit_style = """
+    <style>
+    /* 1. Menyembunyikan Menu Utama (hamburger), Footer, dan Header Streamlit */
+    #MainMenu {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    footer {
+        visibility: hidden !important;
+        display: none !important;
+    }
+    header { /* Ini adalah header Streamlit default di bagian paling atas */
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    /* 2. MENJAMIN SEMUA PESAN INFO/SUCCESS/WARNING (ALERTS/BALLOONS) DISEMBUNYIKAN */
+    /* Ini menargetkan class 'stAlert' yang digunakan oleh st.info(), st.success(), st.warning(),
+       baik yang di main content maupun di sidebar. */
+    .stAlert {
+        display: none !important;
+    }
+
+    /* 3. MENJAMIN SIDEBAR TETAP MUNCUL DAN MELEBARKANNYA */
+    section[data-testid="stSidebar"] {
+        visibility: visible !important;
+        display: block !important;
+        width: 300px !important;       /* Lebar sidebar (sesuaikan jika perlu) */
+        left: 0px !important;
+        transform: none !important;
+        z-index: 9999 !important;
+    }
+
+    /* 4. Pastikan konten utama tidak tumpang tindih dengan sidebar */
+    .main {
+        padding-left: 300px !important; /* Sesuaikan dengan lebar sidebar */
+    }
+
+    /* 5. Mengatasi potensi elemen yang menyebabkan padding/margin tambahan di atas konten utama/sidebar */
+    .stApp > header {
+        display: none !important;
+    }
+    .css-1lcbmhc {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+    }
+    .css-1d391kg {
+        padding-top: 0px !important;
+    }
+    .css-1f198p6 {
+        padding-top: 0px !important;
+    }
+
+    /* 6. Menyembunyikan tombol lipat sidebar (panah ganda <<) */
+    button[data-testid="stSidebarCollapseButton"] {
+        visibility: hidden !important;
+        display: none !important;
+    }
+
+    </style>
+    """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# --- FUNGSI-FUNGSI ANDA TETAP SAMA ---
+# @st.cache_data
+# def load_data():
+#    ... (kode load_data Anda) ...
+
+# @st.cache_resource
+# def load_svm_models():
+#    ... (kode load_svm_models Anda) ...
+
+# ... (sisa logika aplikasi Anda) ...
+
 
 @st.cache_data
 def load_data():
