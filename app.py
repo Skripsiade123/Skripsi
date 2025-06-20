@@ -62,7 +62,9 @@ def load_data():
             initial_rows = len(df)
             df.drop_duplicates(subset=['name'], inplace=True, keep='first')
             if initial_rows - len(df) > 0:
-           
+                st.sidebar.info(f"")  # Pesan ini akan tetap disembunyikan
+        else:
+            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.")  # 
 
         # Menangani Deskripsi Singkat yang Hilang
         if 'short description' in df.columns:
