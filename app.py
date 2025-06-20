@@ -17,6 +17,33 @@ DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 
+hide_streamlit_style = """
+    <style>
+    /* Ini menyembunyikan elemen UI Streamlit utama */
+    #MainMenu {visibility: hidden;} /* Menyembunyikan menu hamburger (tiga garis) di kanan atas */
+    footer {visibility: hidden;} /* Menyembunyikan teks "Made with Streamlit" di footer */
+    header {visibility: hidden;} /* Menyembunyikan header default Streamlit di bagian atas halaman */
+
+    /* Ini menyembunyikan semua pesan st.info/success/warning (Alerts) */
+    /* Termasuk yang muncul di sidebar atau main content */
+    .stAlert {
+        display: none !important;
+    }
+
+    /* Ini adalah target yang lebih spesifik untuk pesan alert di sidebar, untuk jaga-jaga */
+    .stAlert[data-testid="stSidebar"] {
+        display: none !important;
+    }
+
+    /* KODE INI TIDAK MENYEMBUNYIKAN SIDEBAR ITU SENDIRI! */
+    /* Sidebar Streamlit adalah elemen <section data-testid="stSidebar"> */
+    /* Tidak ada aturan di atas yang menargetkan atau menyembunyikan elemen ini. */
+    /* Jadi, sidebar (dengan Dashboard dan radio button) seharusnya TETAP MUNCUL. */
+
+    </style>
+    """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 @st.cache_data
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
