@@ -105,7 +105,7 @@ def load_data():
                     df = pd.read_csv(os.path.join(root, file))
                     df.columns = df.columns.str.strip().str.lower()  # Normalisasi nama kolom
                     csv_found = True
-                    st.sidebar.success(f"Dataset '{file}' berhasil dimuat.")  # Pesan ini akan tetap disembunyikan
+                    st.sidebar.success(f" ")  # Pesan ini akan tetap disembunyikan
                     break
                 except Exception as e:
                     st.sidebar.error(f"Error saat memuat CSV '{file}': {e}")  # Pesan ini akan tetap disembunyikan
