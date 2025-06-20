@@ -16,32 +16,66 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
+import streamlit as st
+# ... (impor dan konfigurasi lainnya) ...
+
+# --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan alerts, NAMUN MEMASTIKAN SIDEBAR TETAP ADA ---
 hide_streamlit_style = """
     <style>
-    /* Ini menyembunyikan elemen UI Streamlit utama */
-    #MainMenu {visibility: hidden;} /* Menyembunyikan menu hamburger (tiga garis) di kanan atas */
-    footer {visibility: hidden;} /* Menyembunyikan teks "Made with Streamlit" di footer */
-    header {visibility: hidden;} /* Menyembunyikan header default Streamlit di bagian atas halaman */
+    /* Menyembunyikan menu hamburger (tiga garis) di kanan atas */
+    #MainMenu {
+        visibility: hidden !important;
+        display: none !important; /* Tambahan display: none untuk lebih pasti */
+    }
 
-    /* Ini menyembunyikan semua pesan st.info/success/warning (Alerts) */
-    /* Termasuk yang muncul di sidebar atau main content */
+    /* Menyembunyikan footer "Made with Streamlit" */
+    footer {
+        visibility: hidden !important;
+        display: none !important; /* Tambahan display: none untuk lebih pasti */
+    }
+
+    /* Menyembunyikan header default Streamlit di bagian atas halaman */
+    /* Pastikan ini tidak memengaruhi bagian sidebar yang berdekatan */
+    header {
+        visibility: hidden !important;
+        display: none !important; /* Tambahan display: none untuk lebih pasti */
+    }
+
+    /* Menyembunyikan semua pesan info/success/warning (st.info, st.success, st.warning) */
     .stAlert {
         display: none !important;
     }
 
-    /* Ini adalah target yang lebih spesifik untuk pesan alert di sidebar, untuk jaga-jaga */
-    .stAlert[data-testid="stSidebar"] {
+    /* Ini menargetkan subheader "Pra-pemrosesan Data:" jika ada dan ingin disembunyikan */
+    h3:contains("Pra-pemrosesan Data:") {
         display: none !important;
     }
 
-    /* KODE INI TIDAK MENYEMBUNYIKAN SIDEBAR ITU SENDIRI! */
-    /* Sidebar Streamlit adalah elemen <section data-testid="stSidebar"> */
-    /* Tidak ada aturan di atas yang menargetkan atau menyembunyikan elemen ini. */
-    /* Jadi, sidebar (dengan Dashboard dan radio button) seharusnya TETAP MUNCUL. */
+    /*
+    PENTING: PASTIKAN SIDEBAR TIDAK TERPENGARUH
+    Streamlit sidebar memiliki data-testid="stSidebar". Kita tidak akan menyentuhnya.
+    Jika masih ada masalah, mungkin ada CSS tambahan yang menimpa.
+    Berikut adalah aturan untuk memastikan sidebar terlihat jika ada konflik yang tidak terduga,
+    tetapi ini seharusnya TIDAK DIPERLUKAN jika aturan di atas tidak menargetkan sidebar.
+    */
+    section[data-testid="stSidebar"] {
+        visibility: visible !important; /* Pastikan sidebar terlihat */
+        display: block !important;     /* Pastikan sidebar menggunakan display block normal */
+        width: 210px !important;       /* Atur lebar standar Streamlit, sesuaikan jika perlu */
+        left: 0px !important;          /* Pastikan tidak digeser ke kiri */
+        transform: none !important;    /* Hapus transformasi yang mungkin menyembunyikan */
+    }
+
+    /* Ini memastikan konten utama bergeser dengan benar jika sidebar terlihat */
+    .block-container {
+        padding-left: 210px !important; /* Sesuaikan padding agar konten tidak tumpang tindih dengan sidebar */
+    }
 
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# ... (sisa kode aplikasi Streamlit Anda) ...
 
 @st.cache_data
 def load_data():
