@@ -18,24 +18,7 @@ VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan d
 
 # --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan sidebar ---
 # --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan sidebar ---
-hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    /* Menghilangkan pesan info/success/warning di sidebar */
-    .stAlert {
-        display: none !important;
-    }
-    /* Opsional: jika ingin menyembunyikan bagian pra-pemrosesan data juga */
-    h3:contains("Pra-pemrosesan Data:") {
-
-    }
-    .stAlert[data-testid="stSidebar"] { /* Ini menargetkan spesifik alert di sidebar, tapi .stAlert lebih umum */
-
-    }
-    </style>
-    """
+hide_streamlit_style
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 @st.cache_data
