@@ -31,7 +31,9 @@ hide_streamlit_style = """
     h3:contains("Pra-pemrosesan Data:") {
         display: none !important;
     }
-  
+    .stAlert[data-testid="stSidebar"] { /* Ini menargetkan spesifik alert di sidebar, tapi .stAlert lebih umum */
+        display: !important;
+    }
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
