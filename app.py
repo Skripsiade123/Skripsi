@@ -94,7 +94,7 @@ def load_svm_models():
         model_genre = joblib.load(SVM_MODEL_GENRE)
         model_tag = joblib.load(SVM_MODEL_TAG)
         model_category = joblib.load(SVM_MODEL_CATEGORY)
-        st.sidebar.success("Model SVM berhasil dimuat.")  # Pesan ini akan tetap disembunyikan
+        st.sidebar.success()  # Pesan ini akan tetap disembunyikan
         return model_genre, model_tag, model_category
     except FileNotFoundError:
         st.error(f"Satu atau lebih file model ({SVM_MODEL_GENRE}, {SVM_MODEL_TAG}, {SVM_MODEL_CATEGORY}) tidak ditemukan. Pastikan file berada di direktori yang sama.")
