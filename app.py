@@ -16,6 +16,7 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
+# --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan alerts,
 hide_streamlit_style = """
     <style>
     /* 1. Menyembunyikan elemen UI Streamlit utama */
@@ -35,6 +36,18 @@ hide_streamlit_style = """
     /* 2. Menyembunyikan semua pesan info/success/warning (st.info, st.success, st.warning) */
     .stAlert {
         display: none !important;
+    }
+
+    /* 3. Aturan Kritis untuk MEMASTIKAN SIDEBAR TETAP TERLIHAT */
+    /* Targetkan elemen sidebar utama berdasarkan data-testid */
+    section[data-testid="stSidebar"] {
+        visibility: visible !important; /* Paksa agar terlihat */
+        display: block !important;     /* Paksa agar menjadi blok elemen normal */
+        width: 210px !important;       /* Atur lebar default Streamlit sidebar */
+        left: 0 !important;            /* Pastikan tidak bergeser dari kiri layar */
+        transform: none !important;    /* Hapus transformasi yang mungkin menyembunyikan */
+        /* Tambahan untuk Streamlit Cloud: Pastikan z-index cukup tinggi jika ada elemen lain yang menutupi */
+        z-index: 9999 !important;
     }
 
     /* 4. Pastikan konten utama tidak menutupi sidebar */
