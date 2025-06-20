@@ -22,11 +22,7 @@ hide_streamlit_style = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .stAlert {
-        display: none !important;
-    }
-    .stAlert[data-testid="stSidebar"] {
-        display: none !important;
+
     }
     </style>
     """
