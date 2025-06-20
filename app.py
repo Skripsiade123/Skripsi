@@ -218,7 +218,7 @@ if halaman == "Beranda":
                                        st.session_state.history["category"])
 
     if is_preference_history_empty:
-        st.info("Anda belum memiliki histori preferensi genre/tag/kategori. Berikut adalah game dengan review positif terbanyak:")
+   
         if 'positive reviews' in df.columns and not df.empty:
             rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
