@@ -16,22 +16,6 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
-# --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan alerts,
-hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    }
-    </style>
-    """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
-# ... (lanjutkan dengan fungsi load_data, load_svm_models, dll.) ...
-
-# ... (sisa kode aplikasi Streamlit Anda) ...
-
 @st.cache_data
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
