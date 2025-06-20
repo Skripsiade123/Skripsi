@@ -30,9 +30,7 @@ hide_streamlit_style = """
     /* Opsional: jika ingin menyembunyikan bagian pra-pemrosesan data juga */
     h3:contains("Pra-pemrosesan Data:") {
         display: none !important;
-    }
-    .stAlert[data-testid=" "] { /* Ini menargetkan spesifik alert di sidebar, tapi .stAlert lebih umum */
-        display: none !important;
+  
     }
     </style>
     """
