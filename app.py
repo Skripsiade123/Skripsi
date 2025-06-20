@@ -17,25 +17,46 @@ DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 # --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan sidebar ---
-# --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan sidebar ---
+
+
 hide_streamlit_style = """
     <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    /* Menghilangkan pesan info/success/warning di sidebar */
+    #MainMenu {visibility: hidden;} /* Menyembunyikan menu hamburger di kanan atas */
+    footer {visibility: hidden;} /* Menyembunyikan footer "Made with Streamlit" */
+    header {visibility: hidden;} /* Menyembunyikan header default Streamlit di bagian atas */
+
+    /* Menghilangkan pesan info/success/warning di seluruh aplikasi */
+    /* Ini akan menyembunyikan st.info, st.success, st.warning yang muncul di main content atau sidebar */
     .stAlert {
         display: none !important;
     }
-    /* Opsional: jika ingin menyembunyikan bagian pra-pemrosesan data juga */
-    h3:contains("Pra-pemrosesan Data:") {
+
+    /* Ini menargetkan spesifik alert di sidebar yang mungkin muncul dari st.info/success/warning di fungsi load_data/load_svm_models */
+    /* Anda sudah punya ini, dan ini bagus untuk menyembunyikan notifikasi di sidebar */
+    .stAlert[data-testid="stSidebar"] {
         display: none !important;
-  
     }
+
+    /* KODE BARU / MODIFIKASI: Pastikan sidebar tidak disembunyikan */
+    /* Streamlit sidebar memiliki data-testid="stSidebar" pada container utamanya. */
+    /* Secara default, visibility-nya sudah visible. Kita hanya perlu memastikan tidak ada aturan lain yang menimpanya. */
+    /* Jika Anda menemukan sidebar masih hilang, ini adalah tempat untuk menambahkan: */
+    /*
+    section[data-testid="stSidebar"] {
+        visibility: visible !important;
+    }
+    */
+
+    /* Untuk tema, ini tidak diatur oleh CSS ini. Tema diatur oleh Streamlit itu sendiri. */
+    /* Jika Anda ingin tema terang (seperti gambar pertama), pastikan tidak ada pengaturan tema gelap di .streamlit/config.toml */
+   
+    
+
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
+# ... (sisa kode aplikasi Streamlit Anda) ...
 @st.cache_data
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
