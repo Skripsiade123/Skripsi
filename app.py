@@ -73,7 +73,7 @@ hide_streamlit_style = """
 
     </style>
     """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(hide_streamlit_style, unsafe_allow_html=False)
 
 # ... (sisa kode aplikasi Streamlit Anda) ...
 
