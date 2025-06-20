@@ -94,9 +94,7 @@ def load_data():
         model_genre = joblib.load(SVM_MODEL_GENRE)
         model_tag = joblib.load(SVM_MODEL_TAG)
         model_category = joblib.load(SVM_MODEL_CATEGORY)
-
-        # Jangan tampilkan pesan sukses
-        # st.sidebar.success("Model SVM berhasil dimuat.")
+        st.success("Model SVM berhasil dimuat.")
 
         return model_genre, model_tag, model_category
 
