@@ -55,7 +55,15 @@ hide_streamlit_style = """
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# ... (setelah blok CSS Anda, atau di awal Logika Utama Aplikasi) ...
 
+st.sidebar.write("DEBUG: Sidebar konten harusnya ada di sini!")
+st.sidebar.title("Dashboard")
+st.sidebar.write("DEBUG: Title 'Dashboard' dirender.")
+halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
+st.sidebar.write(f"DEBUG: Halaman yang dipilih: {halaman}")
+
+# ... (sisa kode Anda) ...
 # ... (sisa kode aplikasi Streamlit Anda) ...
 @st.cache_data
 def load_data():
