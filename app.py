@@ -37,18 +37,6 @@ hide_streamlit_style = """
         display: none !important;
     }
 
-    /* 3. Aturan Kritis untuk MEMASTIKAN SIDEBAR TETAP TERLIHAT */
-    /* Targetkan elemen sidebar utama berdasarkan data-testid */
-    section[data-testid="stSidebar"] {
-        visibility: visible !important; /* Paksa agar terlihat */
-        display: block !important;     /* Paksa agar menjadi blok elemen normal */
-        width: 210px !important;       /* Atur lebar default Streamlit sidebar */
-        left: 0 !important;            /* Pastikan tidak bergeser dari kiri layar */
-        transform: none !important;    /* Hapus transformasi yang mungkin menyembunyikan */
-        /* Tambahan untuk Streamlit Cloud: Pastikan z-index cukup tinggi jika ada elemen lain yang menutupi */
-        z-index: 9999 !important;
-    }
-
     /* 4. Pastikan konten utama tidak menutupi sidebar */
     /* .main adalah class untuk container utama konten Streamlit */
     .main {
