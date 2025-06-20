@@ -36,6 +36,9 @@ hide_streamlit_style = """
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# .streamlit/config.toml
+[theme]
+base="light" # Atau "dark" jika Anda memang ingin tema gelap
 
 
 # --- Fungsi Pembantu ---
