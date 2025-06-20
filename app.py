@@ -16,64 +16,61 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
-import streamlit as st
-# ... (impor dan konfigurasi lainnya) ...
-
-# --- Custom CSS untuk menyembunyikan footer, header Streamlit, dan pesan alerts, NAMUN MEMASTIKAN SIDEBAR TETAP ADA ---
 hide_streamlit_style = """
     <style>
-    /* Menyembunyikan menu hamburger (tiga garis) di kanan atas */
+    /* 1. Menyembunyikan elemen UI Streamlit utama */
     #MainMenu {
         visibility: hidden !important;
-        display: none !important; /* Tambahan display: none untuk lebih pasti */
+        display: none !important;
     }
-
-    /* Menyembunyikan footer "Made with Streamlit" */
     footer {
         visibility: hidden !important;
-        display: none !important; /* Tambahan display: none untuk lebih pasti */
+        display: none !important;
     }
-
-    /* Menyembunyikan header default Streamlit di bagian atas halaman */
-    /* Pastikan ini tidak memengaruhi bagian sidebar yang berdekatan */
     header {
         visibility: hidden !important;
-        display: none !important; /* Tambahan display: none untuk lebih pasti */
+        display: none !important;
     }
 
-    /* Menyembunyikan semua pesan info/success/warning (st.info, st.success, st.warning) */
+    /* 2. Menyembunyikan semua pesan info/success/warning (st.info, st.success, st.warning) */
     .stAlert {
         display: none !important;
     }
 
-    /* Ini menargetkan subheader "Pra-pemrosesan Data:" jika ada dan ingin disembunyikan */
-    h3:contains("Pra-pemrosesan Data:") {
-        display: none !important;
-    }
-
-    /*
-    PENTING: PASTIKAN SIDEBAR TIDAK TERPENGARUH
-    Streamlit sidebar memiliki data-testid="stSidebar". Kita tidak akan menyentuhnya.
-    Jika masih ada masalah, mungkin ada CSS tambahan yang menimpa.
-    Berikut adalah aturan untuk memastikan sidebar terlihat jika ada konflik yang tidak terduga,
-    tetapi ini seharusnya TIDAK DIPERLUKAN jika aturan di atas tidak menargetkan sidebar.
-    */
+    /* 3. Aturan Kritis untuk MEMASTIKAN SIDEBAR TETAP TERLIHAT */
+    /* Targetkan elemen sidebar utama berdasarkan data-testid */
     section[data-testid="stSidebar"] {
-        visibility: visible !important; /* Pastikan sidebar terlihat */
-        display: block !important;     /* Pastikan sidebar menggunakan display block normal */
-        width: 210px !important;       /* Atur lebar standar Streamlit, sesuaikan jika perlu */
-        left: 0px !important;          /* Pastikan tidak digeser ke kiri */
+        visibility: visible !important; /* Paksa agar terlihat */
+        display: block !important;     /* Paksa agar menjadi blok elemen normal */
+        width: 210px !important;       /* Atur lebar default Streamlit sidebar */
+        left: 0 !important;            /* Pastikan tidak bergeser dari kiri layar */
         transform: none !important;    /* Hapus transformasi yang mungkin menyembunyikan */
+        /* Tambahan untuk Streamlit Cloud: Pastikan z-index cukup tinggi jika ada elemen lain yang menutupi */
+        z-index: 9999 !important;
     }
 
-    /* Ini memastikan konten utama bergeser dengan benar jika sidebar terlihat */
-    .block-container {
+    /* 4. Pastikan konten utama tidak menutupi sidebar */
+    /* .main adalah class untuk container utama konten Streamlit */
+    .main {
         padding-left: 210px !important; /* Sesuaikan padding agar konten tidak tumpang tindih dengan sidebar */
+    }
+
+    /* 5. Mengatasi potensi elemen yang menyebabkan padding tambahan di atas konten utama */
+    /* Ini untuk menekan ruang kosong di bagian atas */
+    .stApp > header {
+        display: none;
+    }
+
+    .css-1lcbmhc, .css-1lcbmhc.e1hz8j8g1 { /* Mengatasi celah kosong di atas sidebar pada beberapa versi/tema */
+        margin-top: -65px !important; /* Sesuaikan nilai ini jika ada celah kosong di atas sidebar */
+    }
+    .css-1d391kg { /* Mengatasi margin atas pada konten utama */
+        padding-top: 0rem !important;
     }
 
     </style>
     """
-st.markdown(hide_streamlit_style, unsafe_allow_html=False)
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ... (sisa kode aplikasi Streamlit Anda) ...
 
