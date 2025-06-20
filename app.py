@@ -194,9 +194,13 @@ if "viewed_games" not in st.session_state:
     st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT)
 
 # Navigasi Sidebar
-st.sidebar.title("Dashboard")
-halaman = st.sidebar.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
+with st.sidebar:
+    st.title("Dashboard")
+    halaman = st.radio("Pilih Halaman:", [
+        "Beranda", "Penjelasan Metode", "Rekomendasi Genre",
+        "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"
+    ])
 # --- Konten Halaman ---
 
 if halaman == "Beranda":
