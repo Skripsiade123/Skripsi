@@ -17,63 +17,6 @@ DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 
-# --- Custom CSS: SEMBUNYIKAN KETERANGAN UI ATAS & PESAN INFO/SUCCESS, BIARKAN SIDEBAR UTUH & LEBARKAN ---
-hide_streamlit_style = """
-    <style>
-    /* 1. Menyembunyikan Menu Utama (hamburger), Footer, dan Header Streamlit */
-    #MainMenu {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    footer {
-        visibility: hidden !important;
-        display: none !important;
-    }
-    header { /* Ini adalah header Streamlit default di bagian paling atas */
-        visibility: hidden !important;
-        display: none !important;
-    }
-
-    /* 2. Menyembunyikan SEMUA pesan info/success/warning (Alerts/Balloons) */
-    .stAlert {
-        display: none !important;
-    }
-
-    /* 3. MENJAMIN SIDEBAR TETAP MUNCUL DAN MELEBARKANNYA */
-    /* Targetkan elemen sidebar utama berdasarkan data-testid */
-    section[data-testid="stSidebar"] {
-        visibility: visible !important;
-        display: block !important;
-        width: 300px !important;       /* <--- INI BAGIAN YANG DIUBAH: Lebar baru sidebar */
-        left: 0px !important;
-        transform: none !important;
-        z-index: 9999 !important;
-    }
-
-    /* 4. Pastikan konten utama tidak tumpang tindih dengan sidebar */
-    /* Padding-left harus sama dengan lebar sidebar agar konten utama tidak tertutup */
-    .main {
-        padding-left: 300px !important; /* <--- INI BAGIAN YANG DIUBAH: Sesuaikan dengan lebar sidebar */
-    }
-
-    /* 5. Mengatasi potensi elemen yang menyebabkan padding/margin tambahan di atas konten utama/sidebar */
-    .stApp > header {
-        display: none !important;
-    }
-    .css-1lcbmhc {
-        margin-top: 0px !important;
-        padding-top: 0px !important;
-    }
-    .css-1d391kg {
-        padding-top: 0px !important;
-    }
-    .css-1f198p6 {
-        padding-top: 0px !important;
-    }
-
-    </style>
-    """
-st.markdown(hide_streamlit_style, unsafe_allow_html=False)
 
 @st.cache_data
 def load_data():
