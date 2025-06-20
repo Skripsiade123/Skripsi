@@ -1,11 +1,15 @@
 import streamlit as st
+# Tambahkan baris ini tepat di sini:
+st.set_page_config(initial_sidebar_state="expanded")
+
 import pandas as pd
 import zipfile
 import os
 import joblib
 from collections import deque
-import math # Import math diperlukan untuk perhitungan pagination di fungsi yang lebih baru
+import math
 
+# ... (sisa kode Anda, termasuk blok CSS hide_streamlit_style) ...
 # --- Konfigurasi ---
 DATA_DIR = "data"
 ZIP_FILE_NAME = "Dataset.zip"
