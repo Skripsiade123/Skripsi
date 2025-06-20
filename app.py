@@ -17,7 +17,7 @@ DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
 
 
-# --- Custom CSS: SEMBUNYIKAN KETERANGAN UI ATAS & PESAN INFO/SUCCESS, BIARKAN SIDEBAR UTUH & LEBARKAN, DAN SEMBUNYIKAN TOMBOL LIPAT SIDEBAR ---
+# --- Custom CSS: SEMBUNYIKAN KETERANGAN UI ATAS & PESAN INFO/SUCCESS, BIARKAN SIDEBAR UTUH & LEBARKAN ---
 hide_streamlit_style = """
     <style>
     /* 1. Menyembunyikan Menu Utama (hamburger), Footer, dan Header Streamlit */
@@ -40,18 +40,20 @@ hide_streamlit_style = """
     }
 
     /* 3. MENJAMIN SIDEBAR TETAP MUNCUL DAN MELEBARKANNYA */
+    /* Targetkan elemen sidebar utama berdasarkan data-testid */
     section[data-testid="stSidebar"] {
         visibility: visible !important;
         display: block !important;
-        width: 300px !important;       /* Lebar sidebar */
+        width: 300px !important;       /* <--- INI BAGIAN YANG DIUBAH: Lebar baru sidebar */
         left: 0px !important;
         transform: none !important;
         z-index: 9999 !important;
     }
 
     /* 4. Pastikan konten utama tidak tumpang tindih dengan sidebar */
+    /* Padding-left harus sama dengan lebar sidebar agar konten utama tidak tertutup */
     .main {
-        padding-left: 300px !important; /* Sesuaikan dengan lebar sidebar */
+        padding-left: 300px !important; /* <--- INI BAGIAN YANG DIUBAH: Sesuaikan dengan lebar sidebar */
     }
 
     /* 5. Mengatasi potensi elemen yang menyebabkan padding/margin tambahan di atas konten utama/sidebar */
@@ -67,12 +69,6 @@ hide_streamlit_style = """
     }
     .css-1f198p6 {
         padding-top: 0px !important;
-    }
-
-    /* BARU DITAMBAHKAN: Menyembunyikan tombol lipat sidebar (panah ganda <<) */
-    button[data-testid="stSidebarCollapseButton"] {
-        visibility: hidden !important;
-        display: none !important; /* Menghilangkan elemen dari layout */
     }
 
     </style>
