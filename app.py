@@ -221,8 +221,10 @@ def display_game_card(game_row):
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
 
-    price = game_row.get('price', 'N/A')
-    device = game_row.get('device', 'N/A')
+    price = game_row.get('Price', 'N/A')
+    device = game_row.get('Device', 'N/A')
+    df.rename(columns={"Price": "price", "Device": "device"}, inplace=True)
+
     
     genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
     tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
