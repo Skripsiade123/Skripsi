@@ -1,4 +1,5 @@
 import streamlit as st
+
 # Tambahkan baris ini tepat di sini:
 st.set_page_config(initial_sidebar_state="expanded")
 
@@ -18,7 +19,6 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10  # Batas untuk game yang ditampilkan di satu halaman
 VIEWED_HISTORY_LIMIT = 20  # Batas untuk berapa banyak game unik yang disimpan dalam histori tampilan
-
 
 # --- Custom CSS: SEMBUNYIKAN KETERANGAN UI ATAS & PESAN INFO/SUCCESS, BIARKAN SIDEBAR UTUH & LEBARKAN, DAN SEMBUNYIKAN TOMBOL LIPAT SIDEBAR ---
 hide_streamlit_style = """
@@ -48,7 +48,7 @@ hide_streamlit_style = """
     section[data-testid="stSidebar"] {
         visibility: visible !important;
         display: block !important;
-        width: 300px !important;        /* Lebar sidebar (sesuaikan jika perlu) */
+        width: 300px !important;       /* Lebar sidebar (sesuaikan jika perlu) */
         left: 0px !important;
         transform: none !important;
         z-index: 9999 !important;
@@ -84,6 +84,7 @@ hide_streamlit_style = """
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
+# --- FUNGSI-FUNGSI ANDA TETAP SAMA ---
 @st.cache_data
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
@@ -138,17 +139,14 @@ def load_data():
         else:
             st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.")  # Pesan ini akan tetap disembunyikan
 
-        # Menangani Genre, Tags, Categories, Header Image, Positive Reviews yang Hilang
-        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'youtube_url']:
+        # Menangani Genre, Tags, Categories, Header Image, Positive Reviews, Price, dan Device yang Hilang
+        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device']:
             if col in df.columns:
                 df[col] = df[col].fillna('')
                 if col == 'positive reviews':
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
-                # Add default empty column if not found, to prevent KeyError later
-                df[col] = ''
-                if col not in ['website', 'youtube_url']: # Suppress warning for optional URL columns
-                    st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")  # Pesan ini akan tetap disembunyikan
+                st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")  # Pesan ini akan tetap disembunyikan
 
         # Pastikan URL gambar valid
         if 'header image' in df.columns:
@@ -208,56 +206,39 @@ def display_game_card(game_row):
     genre_str = str(game_row.get('genre', '')).strip()
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
-    price_str = str(game_row.get('price', 'Harga tidak tersedia')).strip() # New: Get price
-    platforms_str = str(game_row.get('platforms', 'Perangkat tidak tersedia')).strip() # New: Get platforms
-    website_url = str(game_row.get('website', '')).strip() # New: Get website URL
-    youtube_url = str(game_row.get('youtube_url', '')).strip() # New: Get YouTube URL
+    price = game_row.get('price', 'N/A')
+    device = game_row.get('device', 'N/A')
 
     genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
     tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
     kategoris_formatted = ", ".join([k.strip() for k in kategori_str.split(',') if k.strip()]) if kategori_str else '-'
-    platforms_formatted = ", ".join([p.strip() for p in platforms_str.split(',') if p.strip()]) if platforms_str else 'Tidak tersedia'
 
     gambar = game_row.get('header image', '')
     if not isinstance(gambar, str) or not gambar.startswith("http") or not gambar.strip():
         gambar = PLACEHOLDER_IMAGE
 
-    # Determine the primary link for the button
-    # Prefer YouTube URL if available, otherwise website, otherwise a placeholder
-    game_link = ""
-    link_text = ""
-    if youtube_url and youtube_url.startswith("http"):
-        game_link = youtube_url
-        link_text = "Tonton Trailer"
-    elif website_url and website_url.startswith("http"):
-        game_link = website_url
-        link_text = "Kunjungi Situs"
-    else:
-        # Fallback if no specific link is found, maybe to a generic search or no button
-        # For now, I'll make the button appear only if there's a valid link.
-        pass
-
-    # Unique key for the button
-    button_key = f"view_game_{nama.replace(' ', '_').replace('.', '')}"
+    # Membuat URL pencarian YouTube
+    Youtube_url = f"https://www.youtube.com/results?search_query={nama.replace(' ', '+')}+gameplay"
 
     st.markdown(f"""
-    <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222;">
-        <div style="flex-shrink: 0;">
-            <img src="{gambar}" style="width: 180px; height: auto; border-radius: 10px; object-fit: cover;">
+    <a href="{Youtube_url}" target="_blank" style="text-decoration: none; color: inherit;">
+        <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222;">
+            <div style="flex-shrink: 0;">
+                <img src="{gambar}" style="width: 180px; height: auto; border-radius: 10px; object-fit: cover;">
+            </div>
+            <div style="flex-grow: 1; color: white;">
+                <h4 style="margin-bottom: 5px;">{nama}</h4>
+                <p style="font-size: 14px; margin-bottom: 10px;">{short_description}</p>
+                <p style="font-size: 13px;">
+                    <strong>Genre:</strong> {genres_formatted} <br>
+                    <strong>Tags:</strong> {tags_formatted} <br>
+                    <strong>Kategori:</strong> {kategoris_formatted} <br>
+                    <strong>Harga:</strong> {price} <br>
+                    <strong>Perangkat:</strong> {device}
+                </p>
+            </div>
         </div>
-        <div style="flex-grow: 1; color: white;">
-            <h4 style="margin-bottom: 5px;">{nama}</h4>
-            <p style="font-size: 14px; margin-bottom: 10px;">{short_description}</p>
-            <p style="font-size: 13px;">
-                <strong>Genre:</strong> {genres_formatted} <br>
-                <strong>Tags:</strong> {tags_formatted} <br>
-                <strong>Kategori:</strong> {kategoris_formatted} <br>
-                <strong>Harga:</strong> {price_str} <br>
-                <strong>Perangkat:</strong> {platforms_formatted}
-            </p>
-            {"<a href='" + game_link + "' target='_blank' style='text-decoration: none;'><button style='background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;'>"+link_text+"</button></a>" if game_link else ""}
-        </div>
-    </div>
+    </a>
     """, unsafe_allow_html=True)
 
     # Tambahkan game ke histori yang dilihat jika memiliki nama
@@ -310,7 +291,6 @@ if halaman == "Beranda":
                                        st.session_state.history["category"])
 
     if is_preference_history_empty:
-
         if 'positive reviews' in df.columns and not df.empty:
             rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
@@ -367,7 +347,6 @@ elif halaman == "Rekomendasi Genre":
             display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil)
         else:
             st.info("Pilih genre dari daftar di atas untuk melihat rekomendasi.")
-
 
 elif halaman == "Rekomendasi Tag":
     st.title("🏷️ Rekomendasi Berdasarkan Tag")
