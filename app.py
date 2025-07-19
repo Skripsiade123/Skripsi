@@ -5,6 +5,7 @@ import os
 import joblib
 from collections import deque
 import math
+import urllib.parse
 
 # Tambahkan baris ini tepat di sini:
 st.set_page_config(initial_sidebar_state="expanded")
@@ -38,7 +39,7 @@ hide_streamlit_style = """
 
     /* 2. MENJAMIN SEMUA PESAN INFO/SUCCESS/WARNING (ALERTS/BALLOONS) DISEMBUNYIKAN */
     /* Ini menargetkan class 'stAlert' yang digunakan oleh st.info(), st.success(), st.warning(),
-        baik yang di main content maupun di sidebar. */
+       baik yang di main content maupun di sidebar. */
     .stAlert {
         display: none !important;
     }
@@ -47,7 +48,7 @@ hide_streamlit_style = """
     section[data-testid="stSidebar"] {
         visibility: visible !important;
         display: block !important;
-        width: 300px !important;       /* Lebar sidebar (sesuaikan jika perlu) */
+        width: 300px !important;      /* Lebar sidebar (sesuaikan jika perlu) */
         left: 0px !important;
         transform: none !important;
         z-index: 9999 !important;
@@ -142,7 +143,7 @@ def load_data():
         # Menangani Genre, Tags, Categories, Header Image, Positive Reviews, Price, dan Device yang Hilang
         # Pastikan kolom 'price' dan 'device' ada dan diisi NaN dengan string kosong
         # Tambahkan 'platforms' juga jika ada dan Anda ingin menampilkannya sebagai bagian dari 'Device' atau terpisah
-        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'platforms']: 
+        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'platforms']:
             if col in df.columns:
                 if col == 'price':
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(str)
@@ -157,14 +158,6 @@ def load_data():
         # Pastikan URL gambar valid
         if 'header image' in df.columns:
             df['header image'] = df['header image'].apply(lambda x: x if (isinstance(x, str) and x.startswith("http")) else "")
-
-        # --- BARIS DEBUGGING BERIKUT DIHAPUS/DIKOMEN ---
-        # st.sidebar.write(f"Kolom di DataFrame (final): {df.columns.tolist()}")
-        # st.sidebar.write("Contoh data untuk Price dan Device:")
-        # if 'price' in df.columns and 'device' in df.columns:
-        #     st.sidebar.dataframe(df[['name', 'price', 'device']].head())
-        # else:
-        #     st.sidebar.warning("Kolom 'price' atau 'device' tidak ada setelah pemrosesan akhir.")
 
     return df
 
@@ -210,8 +203,11 @@ def get_recommendations_based_on_preferences(data_df):
     else:
         return pd.DataFrame()
 
+# =========================================================================================
+# === PERUBAHAN DI SINI: FUNGSI display_game_card DIMODIFIKASI UNTUK MENAMBAHKAN TOMBOL ===
+# =========================================================================================
 def display_game_card(game_row):
-    """Menampilkan informasi game tunggal dalam format kartu terstruktur dan menambahkannya ke histori yang dilihat."""
+    """Menampilkan informasi game tunggal dalam format kartu terstruktur dengan tombol YouTube."""
     nama = game_row.get('name', 'Tidak ada nama').strip()
     short_description = game_row.get('short description', 'Deskripsi tidak tersedia.').strip()
     if not short_description:
@@ -221,10 +217,9 @@ def display_game_card(game_row):
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
 
-    price = game_row.get('Price')
-    device = game_row.get('Device')
-    df.rename(columns={"Price": "price", "Device": "device"}, inplace=True)
-
+    # Menggunakan .get() dengan nama kolom lowercase untuk konsistensi
+    price = game_row.get('price', 'N/A')
+    device = game_row.get('device', 'N/A')
     
     genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
     tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
@@ -234,20 +229,22 @@ def display_game_card(game_row):
     if not isinstance(gambar, str) or not gambar.startswith("http") or not gambar.strip():
         gambar = PLACEHOLDER_IMAGE
 
-    # Membuat URL pencarian YouTube
-    # Gunakan nama game untuk pencarian YouTube, encode spasi dengan '+'
-    Youtube_url = f"https://www.youtube.com/results?search_query={nama.replace(' ', '+')}+gameplay"
+    # Membuat URL pencarian YouTube yang valid
+    # Menggunakan urllib.parse.quote_plus untuk menangani spasi dan karakter khusus dengan benar
+    Youtube_query = f"{nama} gameplay"
+    youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(Youtube_query)}"
 
+    # HTML untuk kartu. Tautan <a> sekarang hanya untuk tombol.
     st.markdown(f"""
-    <a href="{Youtube_url}" target="_blank" style="text-decoration: none; color: inherit;">
-        <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222;">
-            <div style="flex-shrink: 0;">
-                <img src="{gambar}" style="width: 180px; height: auto; border-radius: 10px; object-fit: cover;">
-            </div>
-            <div style="flex-grow: 1; color: white;">
-                <h4 style="margin-bottom: 5px;">{nama}</h4>
-                <p style="font-size: 14px; margin-bottom: 10px;">{short_description}</p>
-                <p style="font-size: 13px;">
+    <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222; color: white;">
+        <div style="flex-shrink: 0;">
+            <img src="{gambar}" style="width: 180px; height: 100%; border-radius: 10px; object-fit: cover;">
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <h4 style="margin-top: 0; margin-bottom: 5px;">{nama}</h4>
+                <p style="font-size: 14px; margin-bottom: 10px; color: #ccc;">{short_description}</p>
+                <p style="font-size: 13px; line-height: 1.6;">
                     <strong>Genre:</strong> {genres_formatted} <br>
                     <strong>Tags:</strong> {tags_formatted} <br>
                     <strong>Kategori:</strong> {kategoris_formatted} <br>
@@ -255,13 +252,19 @@ def display_game_card(game_row):
                     <strong>Perangkat:</strong> {device}
                 </p>
             </div>
+            <div style="margin-top: 15px; text-align: right;">
+                <a href="{youtube_url}" target="_blank" style="text-decoration: none; color: white; background-color: #c4302b; padding: 8px 16px; border-radius: 5px; font-size: 14px; font-weight: bold; display: inline-block;">
+                    🎬 Lihat Gameplay
+                </a>
+            </div>
         </div>
-    </a>
+    </div>
     """, unsafe_allow_html=True)
 
     # Tambahkan game ke histori yang dilihat jika memiliki nama
     if nama != 'Tidak ada nama' and nama not in st.session_state.viewed_games:
         st.session_state.viewed_games.append(nama)
+
 
 def display_recommendations(data_df, title, recommendations_df):
     """Menampilkan judul dan daftar rekomendasi game, menerapkan batas tampilan."""
@@ -271,14 +274,18 @@ def display_recommendations(data_df, title, recommendations_df):
     if recommendations_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
-        display_df = recommendations_df.head(DISPLAY_LIMIT)
-        for _, row in display_df.iterrows():
+        # Menghapus duplikasi nama kolom sebelum menampilkan
+        recommendations_df = recommendations_df.loc[:,~recommendations_df.columns.duplicated()]
+        for _, row in recommendations_df.iterrows():
             display_game_card(row)
 
 # --- Logika Utama Aplikasi ---
 
 # Memuat data dan model
 df = load_data()
+# Menangani kemungkinan duplikasi nama kolom setelah load_data
+df = df.loc[:,~df.columns.duplicated()]
+
 model_genre, model_tag, model_category = load_svm_models()
 
 # Inisialisasi session state untuk histori dan game yang dilihat
@@ -418,7 +425,10 @@ elif halaman == "Histori":
     st.write("Berikut adalah daftar game yang baru saja Anda lihat dari berbagai halaman rekomendasi.")
 
     if st.session_state.viewed_games:
-        for game_name in reversed(list(st.session_state.viewed_games)):
+        # Buat daftar unik dari game yang dilihat untuk mencegah duplikasi tampilan
+        unique_viewed_games = list(dict.fromkeys(reversed(list(st.session_state.viewed_games))))
+        
+        for game_name in unique_viewed_games:
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
                 display_game_card(game_details.iloc[0])
