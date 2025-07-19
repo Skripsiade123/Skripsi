@@ -10,15 +10,19 @@ import urllib.parse
 # Konfigurasi halaman
 st.set_page_config(initial_sidebar_state="expanded")
 
-# --- Konfigurasi ---
+# --- Konfigurasi Batas Tampilan ---
+# Batas untuk halaman Beranda, Genre, Tag, dan Kategori
+DEFAULT_DISPLAY_LIMIT = 10
+# Batas untuk halaman Histori
+HISTORY_DISPLAY_LIMIT = 20
+
+# --- Konfigurasi Path ---
 DATA_DIR = "data"
 ZIP_FILE_NAME = "Dataset.zip"
 SVM_MODEL_GENRE = "svm_model.pkl"
 SVM_MODEL_TAG = "svm_model_tags.pkl"
 SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
-DISPLAY_LIMIT = 10
-VIEWED_HISTORY_LIMIT = 20
 
 # --- Custom CSS ---
 hide_streamlit_style = """
@@ -49,7 +53,7 @@ def load_data():
                 zip_ref.extractall(DATA_DIR)
         except Exception as e:
             st.error(f"Error saat mengekstrak file: {e}")
-            return pd.DataFrame() # Kembalikan DataFrame kosong jika gagal
+            return pd.DataFrame()
 
     df = pd.DataFrame()
     for root, dirs, files in os.walk(DATA_DIR):
@@ -61,7 +65,7 @@ def load_data():
                     break
                 except Exception as e:
                     st.error(f"Error saat memuat CSV '{file}': {e}")
-                    return pd.DataFrame() # Kembalikan DataFrame kosong jika gagal
+                    return pd.DataFrame()
         if not df.empty:
             break
 
@@ -72,29 +76,23 @@ def load_data():
     if 'name' in df.columns:
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
 
-    if 'device' in df.columns:
-        df['device'] = df['device'].fillna('N/A').astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
-    else: df['device'] = 'N/A'
-
-    if 'price' in df.columns:
-        def format_price(price_input):
-            if pd.isna(price_input): return "Gratis"
-            price_str = str(price_input).strip().lower()
-            if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']: return "Gratis"
-            try: return f"Rp{float(price_str):,.0f}"
-            except ValueError: return str(price_input).strip()
-        df['price'] = df['price'].apply(format_price)
-    else: df['price'] = 'N/A'
+    # Pemrosesan kolom lain
+    df['device'] = df.get('device', pd.Series(dtype='str')).fillna('N/A').astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
     
+    def format_price(price_input):
+        if pd.isna(price_input): return "Gratis"
+        price_str = str(price_input).strip().lower()
+        if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']: return "Gratis"
+        try: return f"Rp{float(price_str):,.0f}"
+        except ValueError: return str(price_input).strip()
+    df['price'] = df.get('price', pd.Series(dtype='str')).apply(format_price)
+
     other_cols = {'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A', 'tags': 'N/A', 'categories': 'N/A'}
     for col, default in other_cols.items():
-        if col in df.columns:
-            df[col] = df[col].fillna(default).astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else default)
+        df[col] = df.get(col, pd.Series(dtype='str')).fillna(default).astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else default)
     
-    if 'header image' in df.columns:
-        df['header image'] = df['header image'].fillna('').apply(lambda x: x if isinstance(x, str) and x.startswith("http") else "")
-    if 'positive reviews' in df.columns:
-        df['positive reviews'] = pd.to_numeric(df['positive reviews'], errors='coerce').fillna(0)
+    df['header image'] = df.get('header image', pd.Series(dtype='str')).fillna('').apply(lambda x: x if isinstance(x, str) and x.startswith("http") else "")
+    df['positive reviews'] = pd.to_numeric(df.get('positive reviews', pd.Series(dtype='float')), errors='coerce').fillna(0)
 
     return df
 
@@ -102,12 +100,12 @@ def load_data():
 def load_svm_models():
     """Memuat model SVM."""
     try:
-        models = (joblib.load(SVM_MODEL_GENRE), joblib.load(SVM_MODEL_TAG), joblib.load(SVM_MODEL_CATEGORY))
-        return models
+        return (joblib.load(SVM_MODEL_GENRE), joblib.load(SVM_MODEL_TAG), joblib.load(SVM_MODEL_CATEGORY))
     except Exception:
         return None
 
-def get_recommendations_based_on_preferences(data_df):
+def get_recommendations_based_on_preferences(data_df, limit):
+    """Menghasilkan rekomendasi berdasarkan preferensi dengan batas tertentu."""
     history = st.session_state.history
     if any(history.values()):
         df_temp = data_df.copy()
@@ -118,10 +116,11 @@ def get_recommendations_based_on_preferences(data_df):
             for pref in history["tag"]: df_temp.loc[df_temp["tags"].str.contains(pref, na=False), "score"] += 2
         if history["category"]:
             for pref in history["category"]: df_temp.loc[df_temp["categories"].str.contains(pref, na=False), "score"] += 1
-        return df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False).head(DISPLAY_LIMIT)
+        return df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False).head(limit)
     return pd.DataFrame()
 
 def display_game_card(game_row):
+    """Menampilkan kartu informasi game."""
     nama = game_row.get('name', 'N/A')
     short_description = game_row.get('short description', '')
     price = game_row.get('price', 'N/A')
@@ -157,32 +156,28 @@ def display_game_card(game_row):
         st.session_state.viewed_games.append(nama)
 
 def display_recommendations(recs_df):
+    """Menampilkan daftar rekomendasi game."""
     if recs_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
         for _, row in recs_df.loc[:, ~recs_df.columns.duplicated()].iterrows():
             display_game_card(row)
 
-# =========================================================================================
-# === STRUKTUR UTAMA APLIKASI YANG DIPERBAIKI ===
-# =========================================================================================
+# --- STRUKTUR UTAMA APLIKASI ---
 
-# 1. Muat data dan model di awal.
 df = load_data()
 models = load_svm_models()
 
-# 2. Inisialisasi session state.
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
 if "viewed_games" not in st.session_state:
-    st.session_state.viewed_games = deque(maxlen=VIEWED_HISTORY_LIMIT)
+    # Menggunakan batas histori yang sudah ditentukan
+    st.session_state.viewed_games = deque(maxlen=HISTORY_DISPLAY_LIMIT)
 
-# 3. Tampilkan sidebar navigasi tanpa syarat.
 with st.sidebar:
     st.title("Dashboard")
     halaman = st.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
 
-# 4. Tampilkan konten halaman yang sesuai.
 if halaman == "Beranda":
     st.title("🎮 Rekomendasi Game untuk Anda")
     st.write("Dapatkan rekomendasi game berdasarkan histori pilihan Anda.")
@@ -192,7 +187,8 @@ if halaman == "Beranda":
         st.error("Gagal memuat data atau model. Aplikasi tidak dapat menampilkan rekomendasi.")
     else:
         is_history_empty = not any(st.session_state.history.values())
-        rekomendasi = get_recommendations_based_on_preferences(df) if not is_history_empty else df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
+        # Menggunakan batas tampilan default (10)
+        rekomendasi = get_recommendations_based_on_preferences(df, limit=DEFAULT_DISPLAY_LIMIT) if not is_history_empty else df.sort_values(by='positive reviews', ascending=False).head(DEFAULT_DISPLAY_LIMIT)
         if not is_history_empty:
             st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda:")
         display_recommendations(rekomendasi)
@@ -222,7 +218,8 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
             if pilihan != f"Pilih {title_name}":
                 if pilihan not in st.session_state.history[key_name]:
                     st.session_state.history[key_name].append(pilihan)
-                hasil = df[df[col_name].str.contains(pilihan, case=False, na=False)]
+                # Menggunakan batas tampilan default (10)
+                hasil = df[df[col_name].str.contains(pilihan, case=False, na=False)].head(DEFAULT_DISPLAY_LIMIT)
                 st.subheader(f"Rekomendasi Game untuk {title_name}: {pilihan}")
                 display_recommendations(hasil)
             else:
@@ -230,11 +227,12 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
 
 elif halaman == "Histori":
     st.title("🕒 Histori Game yang Dilihat")
-    st.write("Berikut adalah daftar game yang baru saja Anda lihat.")
+    st.write(f"Berikut adalah daftar hingga {HISTORY_DISPLAY_LIMIT} game yang baru saja Anda lihat.")
     if df.empty:
         st.error("Data game tidak termuat, tidak dapat menampilkan histori.")
     elif st.session_state.viewed_games:
-        for game_name in reversed(list(dict.fromkeys(st.session_state.viewed_games))):
+        # deque sudah secara otomatis membatasi jumlah item hingga HISTORY_DISPLAY_LIMIT (20)
+        for game_name in reversed(list(st.session_state.viewed_games)):
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
                 display_game_card(game_details.iloc[0])
