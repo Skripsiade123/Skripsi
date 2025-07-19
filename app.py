@@ -141,13 +141,11 @@ def load_data():
 
         # Menangani Genre, Tags, Categories, Header Image, Positive Reviews, Price, dan Device yang Hilang
         # Pastikan kolom 'price' dan 'device' ada dan diisi NaN dengan string kosong
-        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'platforms']: # Tambahkan 'platforms' juga jika ada
+        # Tambahkan 'platforms' juga jika ada dan Anda ingin menampilkannya sebagai bagian dari 'Device' atau terpisah
+        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'platforms']: 
             if col in df.columns:
-                # Untuk 'price', pastikan tipenya string untuk display, atau format angka jika itu yang diinginkan
                 if col == 'price':
-                    # Mengisi NaN, lalu mengonversi ke string untuk display
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(str)
-                    # Jika harga 0, bisa ditampilkan sebagai "Gratis" atau "N/A"
                     df[col] = df[col].apply(lambda x: "Gratis" if x == '0.0' else f"Rp{float(x):,.0f}" if x != '' else 'N/A')
                 elif col == 'positive reviews':
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -160,13 +158,13 @@ def load_data():
         if 'header image' in df.columns:
             df['header image'] = df['header image'].apply(lambda x: x if (isinstance(x, str) and x.startswith("http")) else "")
 
-        # Debugging: Konfirmasi nama kolom akhir
-        st.sidebar.write(f"Kolom di DataFrame (final): {df.columns.tolist()}")
-        st.sidebar.write("Contoh data untuk Price dan Device:")
-        if 'price' in df.columns and 'device' in df.columns:
-            st.sidebar.dataframe(df[['name', 'price', 'device']].head())
-        else:
-            st.sidebar.warning("Kolom 'price' atau 'device' tidak ada setelah pemrosesan akhir.")
+        # --- BARIS DEBUGGING BERIKUT DIHAPUS/DIKOMEN ---
+        # st.sidebar.write(f"Kolom di DataFrame (final): {df.columns.tolist()}")
+        # st.sidebar.write("Contoh data untuk Price dan Device:")
+        # if 'price' in df.columns and 'device' in df.columns:
+        #     st.sidebar.dataframe(df[['name', 'price', 'device']].head())
+        # else:
+        #     st.sidebar.warning("Kolom 'price' atau 'device' tidak ada setelah pemrosesan akhir.")
 
     return df
 
@@ -223,17 +221,9 @@ def display_game_card(game_row):
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
 
-    # Pastikan akses kolom yang benar, gunakan .get() untuk keamanan
     price = game_row.get('price', 'N/A')
     device = game_row.get('device', 'N/A')
     
-    # Format Price jika dia adalah angka dan bukan string "N/A"
-    # Ini sudah dilakukan di load_data, tapi jaga-jaga kalau ada perubahan.
-    # if isinstance(price, (int, float)):
-    #     price = f"Rp{price:,.0f}" if price > 0 else "Gratis"
-    # elif pd.isna(price) or price == '': # Jika ada NaN atau string kosong yang lolos
-    #     price = 'N/A'
-
     genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
     tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
     kategoris_formatted = ", ".join([k.strip() for k in kategori_str.split(',') if k.strip()]) if kategori_str else '-'
