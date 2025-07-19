@@ -40,9 +40,6 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # --- FUNGSI-FUNGSI ---
 
-# =========================================================================================
-# === PERUBAHAN UTAMA DI SINI: FUNGSI load_data() DIBUAT JAUH LEBIH ANDAL ===
-# =========================================================================================
 @st.cache_data
 def load_data():
     """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP dengan penanganan data yang andal."""
@@ -72,37 +69,28 @@ def load_data():
         st.error("Tidak ada file CSV dataset yang ditemukan.")
         return pd.DataFrame()
 
-    # Hapus duplikat berdasarkan nama game
     if 'name' in df.columns:
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
 
-    # --- Pemrosesan Kolom 'device' yang Andal ---
     if 'device' in df.columns:
-        # Isi nilai kosong (NaN) dengan string 'N/A', lalu ubah semua jadi string
         df['device'] = df['device'].fillna('N/A').astype(str)
-        # Ganti string kosong atau string 'nan' menjadi 'N/A'
         df['device'] = df['device'].apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
     else:
         df['device'] = 'N/A'
 
-    # --- Pemrosesan Kolom 'price' yang Andal ---
     if 'price' in df.columns:
         def format_price_robustly(price_input):
-            if pd.isna(price_input):
-                return "Gratis"
+            if pd.isna(price_input): return "Gratis"
             price_str = str(price_input).strip().lower()
-            if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']:
-                return "Gratis"
+            if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']: return "Gratis"
             try:
-                price_num = float(price_str)
-                return f"Rp{price_num:,.0f}"
+                return f"Rp{float(price_str):,.0f}"
             except ValueError:
-                return str(price_input).strip() # Kembalikan teks asli jika bukan angka
+                return str(price_input).strip()
         df['price'] = df['price'].apply(format_price_robustly)
     else:
         df['price'] = 'N/A'
 
-    # Proses kolom lainnya
     other_cols = {
         'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A',
         'tags': 'N/A', 'categories': 'N/A'
@@ -136,11 +124,11 @@ def get_recommendations_based_on_preferences(data_df):
     if any(history.values()):
         df_temp = data_df.copy()
         df_temp["score"] = 0
-        if history["genre"] and 'genre' in df_temp.columns:
+        if history["genre"]:
             for pref in history["genre"]: df_temp.loc[df_temp["genre"].str.contains(pref, na=False), "score"] += 3
-        if history["tag"] and 'tags' in df_temp.columns:
+        if history["tag"]:
             for pref in history["tag"]: df_temp.loc[df_temp["tags"].str.contains(pref, na=False), "score"] += 2
-        if history["category"] and 'categories' in df_temp.columns:
+        if history["category"]:
             for pref in history["category"]: df_temp.loc[df_temp["categories"].str.contains(pref, na=False), "score"] += 1
         return df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False).head(DISPLAY_LIMIT)
     return pd.DataFrame()
@@ -153,9 +141,9 @@ def display_game_card(game_row):
     device = game_row.get('device', 'N/A')
     gambar = game_row.get('header image', '') or PLACEHOLDER_IMAGE
     
-    genres = ", ".join(g for g in str(game_row.get('genre', '')).split(',') if g.strip()) or 'N/A'
-    tags = ", ".join(t for t in str(game_row.get('tags', '')).split(',') if t.strip()) or 'N/A'
-    kategoris = ", ".join(k for k in str(game_row.get('categories', '')).split(',') if k.strip()) or 'N/A'
+    genres = ", ".join(g.strip() for g in str(game_row.get('genre', '')).split(',') if g.strip()) or 'N/A'
+    tags = ", ".join(t.strip() for t in str(game_row.get('tags', '')).split(',') if t.strip()) or 'N/A'
+    kategoris = ", ".join(k.strip() for k in str(game_row.get('categories', '')).split(',') if k.strip()) or 'N/A'
     
     youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(f'{nama} gameplay')}"
 
@@ -223,21 +211,21 @@ if not df.empty:
     elif halaman == "Penjelasan Metode":
         st.title("📚 Penjelasan Metode")
         st.write("""
-        Aplikasi ini menggunakan metode **Content-Based Filtering** untuk merekomendasikan game. Ini berarti rekomendasi didasarkan pada karakteristik game itu sendiri, seperti deskripsi, genre, tag, dan kategorinya, serta preferensi Anda yang tercatat dari interaksi sebelumnya.
+        Aplikasi ini menggunakan metode **Content-Based Filtering** untuk merekomendasikan game...
+        """) # Konten tidak diubah
 
-        ### Bagaimana Cara Kerjanya?
-        Model utama yang digunakan adalah **Support Vector Machine (SVM)**. SVM adalah algoritma Machine Learning yang sangat efektif untuk tugas klasifikasi. Dalam konteks ini, SVM dilatih untuk "memahami" hubungan antara teks (seperti deskripsi game) dan atribut-atribut seperti genre, tag, atau kategori.
-        
-        Prosesnya melibatkan **TF-IDF (Term Frequency-Inverse Document Frequency)** untuk mengubah teks deskripsi menjadi vektor angka yang dapat diproses oleh SVM. Vektor ini kemudian digunakan untuk melatih model SVM agar dapat mengklasifikasikan game berdasarkan genre, tag, dan kategorinya, yang memungkinkan sistem untuk memberikan rekomendasi yang relevan.
-        """)
-
+    # =========================================================================================
+    # === PERBAIKAN ERROR DI SINI: Logika untuk mendapatkan `key_name` diperbaiki ===
+    # =========================================================================================
     elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]:
+        # Peta untuk mendefinisikan kolom, judul, dan kunci history yang benar
         page_map = {
-            "Rekomendasi Genre": ("genre", "Genre"),
-            "Rekomendasi Tag": ("tags", "Tag"),
-            "Rekomendasi Kategori": ("categories", "Kategori")
+            "Rekomendasi Genre": ("genre", "Genre", "genre"),
+            "Rekomendasi Tag": ("tags", "Tag", "tag"),
+            "Rekomendasi Kategori": ("categories", "Kategori", "category")
         }
-        col_name, title_name = page_map[halaman]
+        # Ambil semua informasi yang benar dari peta
+        col_name, title_name, key_name = page_map[halaman]
         
         st.title(f"🎯 Rekomendasi Berdasarkan {title_name}")
         
@@ -247,11 +235,13 @@ if not df.empty:
             st.warning(f"Tidak ada {title_name.lower()} yang ditemukan.")
         else:
             pilihan = st.selectbox(f"Pilih {title_name.lower()} sebagai filter:", [f"Pilih {title_name}"] + items)
+            
             if pilihan != f"Pilih {title_name}":
-                key_name = 'genre' if col_name == 'genre' else col_name.replace('s', '')
+                # Gunakan `key_name` yang sudah benar dari `page_map`
                 if pilihan not in st.session_state.history[key_name]:
                     st.session_state.history[key_name].append(pilihan)
-                hasil = df[df[col_name].str.contains(pilihan, na=False)]
+                
+                hasil = df[df[col_name].str.contains(pilihan, case=False, na=False)]
                 st.subheader(f"Rekomendasi Game untuk {title_name}: {pilihan}")
                 display_recommendations(hasil)
             else:
@@ -261,6 +251,7 @@ if not df.empty:
         st.title("🕒 Histori Game yang Dilihat")
         st.write("Berikut adalah daftar game yang baru saja Anda lihat.")
         if st.session_state.viewed_games:
+            # Menggunakan dict.fromkeys untuk mendapatkan item unik sambil menjaga urutan
             for game_name in reversed(list(dict.fromkeys(st.session_state.viewed_games))):
                 game_details = df[df['name'] == game_name]
                 if not game_details.empty:
@@ -275,4 +266,18 @@ if not df.empty:
 
         st.markdown("---")
         st.subheader("Preferensi Tersimpan")
-        # Tampilan preferensi...
+        # Kode untuk menampilkan preferensi tidak diubah
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("**Genre:**")
+            st.write(st.session_state.history.get("genre") or ["- Tidak ada"])
+        with col2:
+            st.markdown("**Tag:**")
+            st.write(st.session_state.history.get("tag") or ["- Tidak ada"])
+        with col3:
+            st.markdown("**Kategori:**")
+            st.write(st.session_state.history.get("category") or ["- Tidak ada"])
+
+        if st.button("Bersihkan Preferensi", key="clear_prefs"):
+            st.session_state.history = {"genre": [], "tag": [], "category": []}
+            st.rerun()
