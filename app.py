@@ -146,18 +146,17 @@ def get_recommendations_based_on_preferences(data_df):
     return pd.DataFrame()
 
 def display_game_card(game_row):
-    """Menampilkan kartu informasi game dengan akses data aman."""
-    # Gunakan akses langsung ke Series, bukan .get()
-    nama = game_row['name'] if 'name' in game_row and pd.notna(game_row['name']) else 'N/A'
-    short_description = game_row['short description'] if 'short description' in game_row and pd.notna(game_row['short description']) else 'Deskripsi tidak tersedia'
-    price = game_row['price'] if 'price' in game_row and pd.notna(game_row['price']) else 'N/A'
-    device = game_row['device'] if 'device' in game_row and pd.notna(game_row['device']) else 'N/A'
-    gambar = game_row['header image'] if 'header image' in game_row and pd.notna(game_row['header image']) and str(game_row['header image']).startswith("http") else PLACEHOLDER_IMAGE
-
-    genres = ", ".join(g.strip() for g in str(game_row['genre']).split(',') if g.strip()) if 'genre' in game_row else 'N/A'
-    tags = ", ".join(t.strip() for t in str(game_row['tags']).split(',') if t.strip()) if 'tags' in game_row else 'N/A'
-    kategoris = ", ".join(k.strip() for k in str(game_row['categories']).split(',') if k.strip()) if 'categories' in game_row else 'N/A'
-
+    """Menampilkan kartu informasi game."""
+    nama = game_row.get('name', 'N/A')
+    short_description = game_row.get('short description', '')
+    price = game_row.get('price', 'N/A')
+    device = game_row.get('device', 'N/A')
+    gambar = game_row.get('header image', '') or PLACEHOLDER_IMAGE
+    
+    genres = ", ".join(g for g in str(game_row.get('genre', '')).split(',') if g.strip()) or 'N/A'
+    tags = ", ".join(t for t in str(game_row.get('tags', '')).split(',') if t.strip()) or 'N/A'
+    kategoris = ", ".join(k for k in str(game_row.get('categories', '')).split(',') if k.strip()) or 'N/A'
+    
     youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(f'{nama} gameplay')}"
 
     st.markdown(f"""
@@ -188,7 +187,6 @@ def display_game_card(game_row):
 
     if nama != 'N/A' and nama not in st.session_state.viewed_games:
         st.session_state.viewed_games.append(nama)
-
 
 def display_recommendations(recs_df):
     """Menampilkan daftar rekomendasi game."""
