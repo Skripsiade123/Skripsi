@@ -11,7 +11,6 @@ import urllib.parse
 st.set_page_config(initial_sidebar_state="expanded")
 
 # --- Konfigurasi Batas Tampilan ---
-# Batas untuk SEMUA halaman sekarang diatur ke 10
 DISPLAY_LIMIT = 10
 
 # --- Konfigurasi Path ---
@@ -44,7 +43,6 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
     if not os.path.exists(DATA_DIR):
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
@@ -95,14 +93,12 @@ def load_data():
 
 @st.cache_resource
 def load_svm_models():
-    """Memuat model SVM."""
     try:
         return (joblib.load(SVM_MODEL_GENRE), joblib.load(SVM_MODEL_TAG), joblib.load(SVM_MODEL_CATEGORY))
     except Exception:
         return None
 
 def get_recommendations_based_on_preferences(data_df):
-    """Menghasilkan rekomendasi berdasarkan preferensi dengan batas yang ditentukan."""
     history = st.session_state.history
     if any(history.values()):
         df_temp = data_df.copy()
@@ -117,7 +113,6 @@ def get_recommendations_based_on_preferences(data_df):
     return pd.DataFrame()
 
 def display_game_card(game_row):
-    """Menampilkan kartu informasi game."""
     nama = game_row.get('name', 'N/A')
     short_description = game_row.get('short description', '')
     price = game_row.get('price', 'N/A')
@@ -153,7 +148,6 @@ def display_game_card(game_row):
         st.session_state.viewed_games.append(nama)
 
 def display_recommendations(recs_df):
-    """Menampilkan daftar rekomendasi game."""
     if recs_df.empty:
         st.info("Tidak ada game yang ditemukan berdasarkan kriteria ini.")
     else:
@@ -168,7 +162,6 @@ models = load_svm_models()
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
 if "viewed_games" not in st.session_state:
-    # Menggunakan batas histori yang sudah disamakan menjadi 10
     st.session_state.viewed_games = deque(maxlen=DISPLAY_LIMIT)
 
 with st.sidebar:
@@ -214,7 +207,6 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
             if pilihan != f"Pilih {title_name}":
                 if pilihan not in st.session_state.history[key_name]:
                     st.session_state.history[key_name].append(pilihan)
-                # Menggunakan batas tampilan default (10)
                 hasil = df[df[col_name].str.contains(pilihan, case=False, na=False)].head(DISPLAY_LIMIT)
                 st.subheader(f"Rekomendasi Game untuk {title_name}: {pilihan}")
                 display_recommendations(hasil)
@@ -227,8 +219,7 @@ elif halaman == "Histori":
     if df.empty:
         st.error("Data game tidak termuat, tidak dapat menampilkan histori.")
     elif st.session_state.viewed_games:
-        # deque sudah secara otomatis membatasi jumlah item hingga DISPLAY_LIMIT (10)
-        for game_name in reversed(list(st.session_state.viewed_games)):
+        for game_name in reversed(list(dict.fromkeys(st.session_state.viewed_games))):
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
                 display_game_card(game_details.iloc[0])
@@ -242,16 +233,25 @@ elif halaman == "Histori":
 
     st.markdown("---")
     st.subheader("Preferensi Tersimpan")
+    
+    # === PERBAIKAN DI SINI: Menggunakan loop untuk tampilan yang rapi ===
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("**Genre:**")
-        st.write(st.session_state.history.get("genre") or ["- Tidak ada"])
-    with col2:
-        st.markdown("**Tag:**")
-        st.write(st.session_state.history.get("tag") or ["- Tidak ada"])
-    with col3:
-        st.markdown("**Kategori:**")
-        st.write(st.session_state.history.get("category") or ["- Tidak ada"])
+    
+    # Fungsi bantuan untuk menampilkan daftar preferensi
+    def display_preference_list(column, title):
+        with column:
+            st.markdown(f"**{title}:**")
+            pref_list = st.session_state.history.get(title.lower())
+            if pref_list:
+                for item in pref_list:
+                    st.markdown(f"- {item}")
+            else:
+                st.markdown("- Tidak ada")
+
+    display_preference_list(col1, "Genre")
+    display_preference_list(col2, "Tag")
+    display_preference_list(col3, "Kategori")
+
     if st.button("Bersihkan Preferensi", key="clear_prefs"):
         st.session_state.history = {"genre": [], "tag": [], "category": []}
         st.rerun()
