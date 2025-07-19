@@ -1,14 +1,13 @@
 import streamlit as st
-
-# Tambahkan baris ini tepat di sini:
-st.set_page_config(initial_sidebar_state="expanded")
-
 import pandas as pd
 import zipfile
 import os
 import joblib
 from collections import deque
 import math
+
+# Tambahkan baris ini tepat di sini:
+st.set_page_config(initial_sidebar_state="expanded")
 
 # --- Konfigurasi ---
 DATA_DIR = "data"
@@ -108,7 +107,8 @@ def load_data():
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
                     df = pd.read_csv(os.path.join(root, file))
-                    df.columns = df.columns.str.strip().str.lower()  # Normalisasi nama kolom
+                    # Normalisasi nama kolom: strip whitespace dan ubah ke lowercase
+                    df.columns = [col.strip().lower() for col in df.columns]
                     csv_found = True
                     st.sidebar.success(f"Dataset '{file}' berhasil dimuat. ")  # Pesan ini akan tetap disembunyikan
                     break
@@ -140,17 +140,33 @@ def load_data():
             st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.")  # Pesan ini akan tetap disembunyikan
 
         # Menangani Genre, Tags, Categories, Header Image, Positive Reviews, Price, dan Device yang Hilang
-        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device']:
+        # Pastikan kolom 'price' dan 'device' ada dan diisi NaN dengan string kosong
+        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'platforms']: # Tambahkan 'platforms' juga jika ada
             if col in df.columns:
-                df[col] = df[col].fillna('')
-                if col == 'positive reviews':
+                # Untuk 'price', pastikan tipenya string untuk display, atau format angka jika itu yang diinginkan
+                if col == 'price':
+                    # Mengisi NaN, lalu mengonversi ke string untuk display
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(str)
+                    # Jika harga 0, bisa ditampilkan sebagai "Gratis" atau "N/A"
+                    df[col] = df[col].apply(lambda x: "Gratis" if x == '0.0' else f"Rp{float(x):,.0f}" if x != '' else 'N/A')
+                elif col == 'positive reviews':
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+                else:
+                    df[col] = df[col].fillna('')
             else:
                 st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")  # Pesan ini akan tetap disembunyikan
 
         # Pastikan URL gambar valid
         if 'header image' in df.columns:
             df['header image'] = df['header image'].apply(lambda x: x if (isinstance(x, str) and x.startswith("http")) else "")
+
+        # Debugging: Konfirmasi nama kolom akhir
+        st.sidebar.write(f"Kolom di DataFrame (final): {df.columns.tolist()}")
+        st.sidebar.write("Contoh data untuk Price dan Device:")
+        if 'price' in df.columns and 'device' in df.columns:
+            st.sidebar.dataframe(df[['name', 'price', 'device']].head())
+        else:
+            st.sidebar.warning("Kolom 'price' atau 'device' tidak ada setelah pemrosesan akhir.")
 
     return df
 
@@ -206,8 +222,17 @@ def display_game_card(game_row):
     genre_str = str(game_row.get('genre', '')).strip()
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
+
+    # Pastikan akses kolom yang benar, gunakan .get() untuk keamanan
     price = game_row.get('price', 'N/A')
     device = game_row.get('device', 'N/A')
+    
+    # Format Price jika dia adalah angka dan bukan string "N/A"
+    # Ini sudah dilakukan di load_data, tapi jaga-jaga kalau ada perubahan.
+    # if isinstance(price, (int, float)):
+    #     price = f"Rp{price:,.0f}" if price > 0 else "Gratis"
+    # elif pd.isna(price) or price == '': # Jika ada NaN atau string kosong yang lolos
+    #     price = 'N/A'
 
     genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
     tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
@@ -218,6 +243,7 @@ def display_game_card(game_row):
         gambar = PLACEHOLDER_IMAGE
 
     # Membuat URL pencarian YouTube
+    # Gunakan nama game untuk pencarian YouTube, encode spasi dengan '+'
     Youtube_url = f"https://www.youtube.com/results?search_query={nama.replace(' ', '+')}+gameplay"
 
     st.markdown(f"""
@@ -347,6 +373,7 @@ elif halaman == "Rekomendasi Genre":
             display_recommendations(df, f"Rekomendasi Game untuk Genre: {genre_pilihan}", hasil)
         else:
             st.info("Pilih genre dari daftar di atas untuk melihat rekomendasi.")
+
 
 elif halaman == "Rekomendasi Tag":
     st.title("🏷️ Rekomendasi Berdasarkan Tag")
