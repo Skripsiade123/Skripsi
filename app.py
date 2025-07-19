@@ -9,7 +9,6 @@ import joblib
 from collections import deque
 import math
 
-# ... (sisa kode Anda, termasuk blok CSS hide_streamlit_style) ...
 # --- Konfigurasi ---
 DATA_DIR = "data"
 ZIP_FILE_NAME = "Dataset.zip"
@@ -40,7 +39,7 @@ hide_streamlit_style = """
 
     /* 2. MENJAMIN SEMUA PESAN INFO/SUCCESS/WARNING (ALERTS/BALLOONS) DISEMBUNYIKAN */
     /* Ini menargetkan class 'stAlert' yang digunakan oleh st.info(), st.success(), st.warning(),
-       baik yang di main content maupun di sidebar. */
+        baik yang di main content maupun di sidebar. */
     .stAlert {
         display: none !important;
     }
@@ -49,7 +48,7 @@ hide_streamlit_style = """
     section[data-testid="stSidebar"] {
         visibility: visible !important;
         display: block !important;
-        width: 300px !important;       /* Lebar sidebar (sesuaikan jika perlu) */
+        width: 300px !important;        /* Lebar sidebar (sesuaikan jika perlu) */
         left: 0px !important;
         transform: none !important;
         z-index: 9999 !important;
@@ -84,18 +83,6 @@ hide_streamlit_style = """
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
-# --- FUNGSI-FUNGSI ANDA TETAP SAMA ---
-# @st.cache_data
-# def load_data():
-#    ... (kode load_data Anda) ...
-
-# @st.cache_resource
-# def load_svm_models():
-#    ... (kode load_svm_models Anda) ...
-
-# ... (sisa logika aplikasi Anda) ...
-
 
 @st.cache_data
 def load_data():
@@ -143,7 +130,7 @@ def load_data():
             if initial_rows - len(df) > 0:
                 st.sidebar.info(f"")  # Pesan ini akan tetap disembunyikan
         else:
-            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.")  # 
+            st.sidebar.warning("Kolom 'name' tidak ditemukan untuk penghapusan duplikat. Melewatkan deduplikasi.")  #
 
         # Menangani Deskripsi Singkat yang Hilang
         if 'short description' in df.columns:
@@ -152,13 +139,16 @@ def load_data():
             st.sidebar.warning("Kolom 'short description' tidak ditemukan. Deskripsi game mungkin hilang.")  # Pesan ini akan tetap disembunyikan
 
         # Menangani Genre, Tags, Categories, Header Image, Positive Reviews yang Hilang
-        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews']:
+        for col in ['genre', 'tags', 'categories', 'header image', 'positive reviews', 'price', 'device', 'youtube_url']:
             if col in df.columns:
                 df[col] = df[col].fillna('')
                 if col == 'positive reviews':
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
-                st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")  # Pesan ini akan tetap disembunyikan
+                # Add default empty column if not found, to prevent KeyError later
+                df[col] = ''
+                if col not in ['website', 'youtube_url']: # Suppress warning for optional URL columns
+                    st.sidebar.warning(f"Kolom '{col}' tidak ditemukan di dataset. Pastikan nama kolom benar.")  # Pesan ini akan tetap disembunyikan
 
         # Pastikan URL gambar valid
         if 'header image' in df.columns:
@@ -181,9 +171,6 @@ def load_svm_models():
     except Exception as e:
         st.error(f"Error saat memuat model SVM: {e}. Periksa file model Anda.")
         st.stop()
-
-
-
 
 def get_recommendations_based_on_preferences(data_df):
     """Menghasilkan rekomendasi game berdasarkan histori preferensi genre/tag/kategori pengguna."""
@@ -221,14 +208,37 @@ def display_game_card(game_row):
     genre_str = str(game_row.get('genre', '')).strip()
     tag_str = str(game_row.get('tags', '')).strip()
     kategori_str = str(game_row.get('categories', '')).strip()
+    price_str = str(game_row.get('price', 'Harga tidak tersedia')).strip() # New: Get price
+    platforms_str = str(game_row.get('platforms', 'Perangkat tidak tersedia')).strip() # New: Get platforms
+    website_url = str(game_row.get('website', '')).strip() # New: Get website URL
+    youtube_url = str(game_row.get('youtube_url', '')).strip() # New: Get YouTube URL
 
     genres_formatted = ", ".join([g.strip() for g in genre_str.split(',') if g.strip()]) if genre_str else '-'
     tags_formatted = ", ".join([t.strip() for t in tag_str.split(',') if t.strip()]) if tag_str else '-'
     kategoris_formatted = ", ".join([k.strip() for k in kategori_str.split(',') if k.strip()]) if kategori_str else '-'
+    platforms_formatted = ", ".join([p.strip() for p in platforms_str.split(',') if p.strip()]) if platforms_str else 'Tidak tersedia'
 
     gambar = game_row.get('header image', '')
     if not isinstance(gambar, str) or not gambar.startswith("http") or not gambar.strip():
         gambar = PLACEHOLDER_IMAGE
+
+    # Determine the primary link for the button
+    # Prefer YouTube URL if available, otherwise website, otherwise a placeholder
+    game_link = ""
+    link_text = ""
+    if youtube_url and youtube_url.startswith("http"):
+        game_link = youtube_url
+        link_text = "Tonton Trailer"
+    elif website_url and website_url.startswith("http"):
+        game_link = website_url
+        link_text = "Kunjungi Situs"
+    else:
+        # Fallback if no specific link is found, maybe to a generic search or no button
+        # For now, I'll make the button appear only if there's a valid link.
+        pass
+
+    # Unique key for the button
+    button_key = f"view_game_{nama.replace(' ', '_').replace('.', '')}"
 
     st.markdown(f"""
     <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222;">
@@ -241,8 +251,11 @@ def display_game_card(game_row):
             <p style="font-size: 13px;">
                 <strong>Genre:</strong> {genres_formatted} <br>
                 <strong>Tags:</strong> {tags_formatted} <br>
-                <strong>Kategori:</strong> {kategoris_formatted}
+                <strong>Kategori:</strong> {kategoris_formatted} <br>
+                <strong>Harga:</strong> {price_str} <br>
+                <strong>Perangkat:</strong> {platforms_formatted}
             </p>
+            {"<a href='" + game_link + "' target='_blank' style='text-decoration: none;'><button style='background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;'>"+link_text+"</button></a>" if game_link else ""}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -297,7 +310,7 @@ if halaman == "Beranda":
                                        st.session_state.history["category"])
 
     if is_preference_history_empty:
-   
+
         if 'positive reviews' in df.columns and not df.empty:
             rekomendasi = df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         else:
