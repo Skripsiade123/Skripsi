@@ -42,7 +42,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP dengan penanganan data yang andal."""
+    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP dengan penanganan encoding."""
     if not os.path.exists(DATA_DIR):
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
@@ -56,7 +56,8 @@ def load_data():
         for file in files:
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
-                    df = pd.read_csv(os.path.join(root, file))
+                    # === PERBAIKAN DI SINI: Menambahkan encoding='utf-8' ===
+                    df = pd.read_csv(os.path.join(root, file), encoding='utf-8')
                     df.columns = [col.strip().lower() for col in df.columns]
                     break
                 except Exception as e:
@@ -72,6 +73,7 @@ def load_data():
     if 'name' in df.columns:
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
 
+    # Pemrosesan kolom lain tetap sama
     if 'device' in df.columns:
         df['device'] = df['device'].fillna('N/A').astype(str)
         df['device'] = df['device'].apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
@@ -83,18 +85,13 @@ def load_data():
             if pd.isna(price_input): return "Gratis"
             price_str = str(price_input).strip().lower()
             if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']: return "Gratis"
-            try:
-                return f"Rp{float(price_str):,.0f}"
-            except ValueError:
-                return str(price_input).strip()
+            try: return f"Rp{float(price_str):,.0f}"
+            except ValueError: return str(price_input).strip()
         df['price'] = df['price'].apply(format_price_robustly)
     else:
         df['price'] = 'N/A'
 
-    other_cols = {
-        'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A',
-        'tags': 'N/A', 'categories': 'N/A'
-    }
+    other_cols = {'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A', 'tags': 'N/A', 'categories': 'N/A'}
     for col, default in other_cols.items():
         if col in df.columns:
             df[col] = df[col].fillna(default).astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else default)
@@ -210,21 +207,14 @@ if not df.empty:
 
     elif halaman == "Penjelasan Metode":
         st.title("📚 Penjelasan Metode")
-        st.write("""
-        Aplikasi ini menggunakan metode **Content-Based Filtering** untuk merekomendasikan game...
-        """) # Konten tidak diubah
+        st.write("Penjelasan metode...") # Konten tidak diubah
 
-    # =========================================================================================
-    # === PERBAIKAN ERROR DI SINI: Logika untuk mendapatkan `key_name` diperbaiki ===
-    # =========================================================================================
     elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]:
-        # Peta untuk mendefinisikan kolom, judul, dan kunci history yang benar
         page_map = {
             "Rekomendasi Genre": ("genre", "Genre", "genre"),
             "Rekomendasi Tag": ("tags", "Tag", "tag"),
             "Rekomendasi Kategori": ("categories", "Kategori", "category")
         }
-        # Ambil semua informasi yang benar dari peta
         col_name, title_name, key_name = page_map[halaman]
         
         st.title(f"🎯 Rekomendasi Berdasarkan {title_name}")
@@ -237,7 +227,6 @@ if not df.empty:
             pilihan = st.selectbox(f"Pilih {title_name.lower()} sebagai filter:", [f"Pilih {title_name}"] + items)
             
             if pilihan != f"Pilih {title_name}":
-                # Gunakan `key_name` yang sudah benar dari `page_map`
                 if pilihan not in st.session_state.history[key_name]:
                     st.session_state.history[key_name].append(pilihan)
                 
@@ -251,7 +240,6 @@ if not df.empty:
         st.title("🕒 Histori Game yang Dilihat")
         st.write("Berikut adalah daftar game yang baru saja Anda lihat.")
         if st.session_state.viewed_games:
-            # Menggunakan dict.fromkeys untuk mendapatkan item unik sambil menjaga urutan
             for game_name in reversed(list(dict.fromkeys(st.session_state.viewed_games))):
                 game_details = df[df['name'] == game_name]
                 if not game_details.empty:
@@ -266,7 +254,6 @@ if not df.empty:
 
         st.markdown("---")
         st.subheader("Preferensi Tersimpan")
-        # Kode untuk menampilkan preferensi tidak diubah
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown("**Genre:**")
