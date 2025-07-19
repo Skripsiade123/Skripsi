@@ -40,9 +40,12 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # --- FUNGSI-FUNGSI ---
 
+# =========================================================================================
+# === PERUBAHAN UTAMA DI SINI: FUNGSI load_data() DIBUAT JAUH LEBIH ANDAL ===
+# =========================================================================================
 @st.cache_data
 def load_data():
-    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
+    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP dengan penanganan data yang andal."""
     if not os.path.exists(DATA_DIR):
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
@@ -66,50 +69,56 @@ def load_data():
             break
 
     if df.empty:
-        st.error(f"Tidak ada file CSV dataset yang ditemukan.")
+        st.error("Tidak ada file CSV dataset yang ditemukan.")
         return pd.DataFrame()
 
+    # Hapus duplikat berdasarkan nama game
     if 'name' in df.columns:
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
-    
-    # Kolom yang akan diproses (kolom 'platforms' dihapus dari sini)
-    cols_to_process = {
-        'short description': 'Deskripsi tidak tersedia.', 'genre': 'N/A',
-        'tags': 'N/A', 'categories': 'N/A', 'header image': '', 'device': 'N/A'
-    }
-    for col, default_value in cols_to_process.items():
-        if col in df.columns:
-            df[col] = df[col].fillna(default_value)
-            df[col] = df[col].apply(lambda x: default_value if isinstance(x, str) and not x.strip() else x)
-    
-    # === PERUBAHAN DI SINI: Logika pemrosesan harga yang lebih andal ===
+
+    # --- Pemrosesan Kolom 'device' yang Andal ---
+    if 'device' in df.columns:
+        # Isi nilai kosong (NaN) dengan string 'N/A', lalu ubah semua jadi string
+        df['device'] = df['device'].fillna('N/A').astype(str)
+        # Ganti string kosong atau string 'nan' menjadi 'N/A'
+        df['device'] = df['device'].apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
+    else:
+        df['device'] = 'N/A'
+
+    # --- Pemrosesan Kolom 'price' yang Andal ---
     if 'price' in df.columns:
-        # Fungsi untuk memformat harga
-        def format_price_properly(price_val):
-            if pd.isna(price_val) or str(price_val).strip() in ['0', '0.0', '']:
+        def format_price_robustly(price_input):
+            if pd.isna(price_input):
+                return "Gratis"
+            price_str = str(price_input).strip().lower()
+            if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']:
                 return "Gratis"
             try:
-                # Coba konversi ke angka dan format
-                numeric_price = float(price_val)
-                if numeric_price == 0:
-                    return "Gratis"
-                return f"Rp{numeric_price:,.0f}"
-            except (ValueError, TypeError):
-                # Jika bukan angka (misal: 'Hubungi Penjual'), kembalikan apa adanya
-                return str(price_val)
-        
-        df['price'] = df['price'].apply(format_price_properly)
+                price_num = float(price_str)
+                return f"Rp{price_num:,.0f}"
+            except ValueError:
+                return str(price_input).strip() # Kembalikan teks asli jika bukan angka
+        df['price'] = df['price'].apply(format_price_robustly)
     else:
-        # Jika kolom harga tidak ada sama sekali, buat kolomnya dengan nilai N/A
         df['price'] = 'N/A'
 
-    if 'positive reviews' in df.columns:
-        df['positive reviews'] = pd.to_numeric(df['positive reviews'], errors='coerce').fillna(0)
+    # Proses kolom lainnya
+    other_cols = {
+        'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A',
+        'tags': 'N/A', 'categories': 'N/A'
+    }
+    for col, default in other_cols.items():
+        if col in df.columns:
+            df[col] = df[col].fillna(default).astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else default)
     
     if 'header image' in df.columns:
-        df['header image'] = df['header image'].apply(lambda x: x if isinstance(x, str) and x.startswith("http") else "")
+        df['header image'] = df['header image'].fillna('').apply(lambda x: x if isinstance(x, str) and x.startswith("http") else "")
+    
+    if 'positive reviews' in df.columns:
+        df['positive reviews'] = pd.to_numeric(df['positive reviews'], errors='coerce').fillna(0)
 
     return df
+
 
 @st.cache_resource
 def load_svm_models():
@@ -210,12 +219,17 @@ if not df.empty:
         if not is_history_empty:
             st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda:")
         display_recommendations(rekomendasi)
-    
-    # ... (Kode untuk halaman lain tidak diubah) ...
-    
+
     elif halaman == "Penjelasan Metode":
         st.title("📚 Penjelasan Metode")
-        st.write("...") # Konten tetap sama
+        st.write("""
+        Aplikasi ini menggunakan metode **Content-Based Filtering** untuk merekomendasikan game. Ini berarti rekomendasi didasarkan pada karakteristik game itu sendiri, seperti deskripsi, genre, tag, dan kategorinya, serta preferensi Anda yang tercatat dari interaksi sebelumnya.
+
+        ### Bagaimana Cara Kerjanya?
+        Model utama yang digunakan adalah **Support Vector Machine (SVM)**. SVM adalah algoritma Machine Learning yang sangat efektif untuk tugas klasifikasi. Dalam konteks ini, SVM dilatih untuk "memahami" hubungan antara teks (seperti deskripsi game) dan atribut-atribut seperti genre, tag, atau kategori.
+        
+        Prosesnya melibatkan **TF-IDF (Term Frequency-Inverse Document Frequency)** untuk mengubah teks deskripsi menjadi vektor angka yang dapat diproses oleh SVM. Vektor ini kemudian digunakan untuk melatih model SVM agar dapat mengklasifikasikan game berdasarkan genre, tag, dan kategorinya, yang memungkinkan sistem untuk memberikan rekomendasi yang relevan.
+        """)
 
     elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]:
         page_map = {
@@ -261,4 +275,4 @@ if not df.empty:
 
         st.markdown("---")
         st.subheader("Preferensi Tersimpan")
-        # ... (Tampilan preferensi tidak diubah) ...
+        # Tampilan preferensi...
