@@ -11,10 +11,8 @@ import urllib.parse
 st.set_page_config(initial_sidebar_state="expanded")
 
 # --- Konfigurasi Batas Tampilan ---
-# Batas untuk halaman Beranda, Genre, Tag, dan Kategori
-DEFAULT_DISPLAY_LIMIT = 10
-# Batas untuk halaman Histori
-HISTORY_DISPLAY_LIMIT = 20
+# Batas untuk SEMUA halaman sekarang diatur ke 10
+DISPLAY_LIMIT = 10
 
 # --- Konfigurasi Path ---
 DATA_DIR = "data"
@@ -46,7 +44,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP dengan penanganan encoding."""
+    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP."""
     if not os.path.exists(DATA_DIR):
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
@@ -76,7 +74,6 @@ def load_data():
     if 'name' in df.columns:
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
 
-    # Pemrosesan kolom lain
     df['device'] = df.get('device', pd.Series(dtype='str')).fillna('N/A').astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
     
     def format_price(price_input):
@@ -104,8 +101,8 @@ def load_svm_models():
     except Exception:
         return None
 
-def get_recommendations_based_on_preferences(data_df, limit):
-    """Menghasilkan rekomendasi berdasarkan preferensi dengan batas tertentu."""
+def get_recommendations_based_on_preferences(data_df):
+    """Menghasilkan rekomendasi berdasarkan preferensi dengan batas yang ditentukan."""
     history = st.session_state.history
     if any(history.values()):
         df_temp = data_df.copy()
@@ -116,7 +113,7 @@ def get_recommendations_based_on_preferences(data_df, limit):
             for pref in history["tag"]: df_temp.loc[df_temp["tags"].str.contains(pref, na=False), "score"] += 2
         if history["category"]:
             for pref in history["category"]: df_temp.loc[df_temp["categories"].str.contains(pref, na=False), "score"] += 1
-        return df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False).head(limit)
+        return df_temp[df_temp["score"] > 0].sort_values(by="score", ascending=False).head(DISPLAY_LIMIT)
     return pd.DataFrame()
 
 def display_game_card(game_row):
@@ -171,8 +168,8 @@ models = load_svm_models()
 if "history" not in st.session_state:
     st.session_state.history = {"genre": [], "tag": [], "category": []}
 if "viewed_games" not in st.session_state:
-    # Menggunakan batas histori yang sudah ditentukan
-    st.session_state.viewed_games = deque(maxlen=HISTORY_DISPLAY_LIMIT)
+    # Menggunakan batas histori yang sudah disamakan menjadi 10
+    st.session_state.viewed_games = deque(maxlen=DISPLAY_LIMIT)
 
 with st.sidebar:
     st.title("Dashboard")
@@ -187,8 +184,7 @@ if halaman == "Beranda":
         st.error("Gagal memuat data atau model. Aplikasi tidak dapat menampilkan rekomendasi.")
     else:
         is_history_empty = not any(st.session_state.history.values())
-        # Menggunakan batas tampilan default (10)
-        rekomendasi = get_recommendations_based_on_preferences(df, limit=DEFAULT_DISPLAY_LIMIT) if not is_history_empty else df.sort_values(by='positive reviews', ascending=False).head(DEFAULT_DISPLAY_LIMIT)
+        rekomendasi = get_recommendations_based_on_preferences(df) if not is_history_empty else df.sort_values(by='positive reviews', ascending=False).head(DISPLAY_LIMIT)
         if not is_history_empty:
             st.info("Berikut adalah rekomendasi game berdasarkan preferensi Anda:")
         display_recommendations(rekomendasi)
@@ -219,7 +215,7 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
                 if pilihan not in st.session_state.history[key_name]:
                     st.session_state.history[key_name].append(pilihan)
                 # Menggunakan batas tampilan default (10)
-                hasil = df[df[col_name].str.contains(pilihan, case=False, na=False)].head(DEFAULT_DISPLAY_LIMIT)
+                hasil = df[df[col_name].str.contains(pilihan, case=False, na=False)].head(DISPLAY_LIMIT)
                 st.subheader(f"Rekomendasi Game untuk {title_name}: {pilihan}")
                 display_recommendations(hasil)
             else:
@@ -227,11 +223,11 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
 
 elif halaman == "Histori":
     st.title("🕒 Histori Game yang Dilihat")
-    st.write(f"Berikut adalah daftar hingga {HISTORY_DISPLAY_LIMIT} game yang baru saja Anda lihat.")
+    st.write(f"Berikut adalah daftar hingga {DISPLAY_LIMIT} game yang baru saja Anda lihat.")
     if df.empty:
         st.error("Data game tidak termuat, tidak dapat menampilkan histori.")
     elif st.session_state.viewed_games:
-        # deque sudah secara otomatis membatasi jumlah item hingga HISTORY_DISPLAY_LIMIT (20)
+        # deque sudah secara otomatis membatasi jumlah item hingga DISPLAY_LIMIT (10)
         for game_name in reversed(list(st.session_state.viewed_games)):
             game_details = df[df['name'] == game_name]
             if not game_details.empty:
