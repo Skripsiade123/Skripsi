@@ -5,7 +5,7 @@ import os
 import joblib
 from collections import deque
 import math
-import urllib.parse
+import urllib.parse # <-- Ditambahkan untuk membuat URL YouTube yang valid
 
 # Konfigurasi halaman
 st.set_page_config(initial_sidebar_state="expanded")
@@ -19,6 +19,7 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 DISPLAY_LIMIT = 10
 VIEWED_HISTORY_LIMIT = 20
+
 
 # --- Custom CSS ---
 hide_streamlit_style = """
@@ -42,7 +43,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    """Memuat dan melakukan pra-pemrosesan dataset dari file ZIP dengan penanganan encoding."""
+    """Memuat dan melakukan pra-pemrosesan dataset, termasuk price dan device."""
     if not os.path.exists(DATA_DIR):
         try:
             with zipfile.ZipFile(ZIP_FILE_NAME, 'r') as zip_ref:
@@ -56,7 +57,6 @@ def load_data():
         for file in files:
             if file.lower().endswith(".csv") and ("dataset" in file.lower() or "data" in file.lower()):
                 try:
-                    # === PERBAIKAN DI SINI: Menambahkan encoding='utf-8' ===
                     df = pd.read_csv(os.path.join(root, file), encoding='utf-8')
                     df.columns = [col.strip().lower() for col in df.columns]
                     break
@@ -73,24 +73,29 @@ def load_data():
     if 'name' in df.columns:
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
 
-    # Pemrosesan kolom lain tetap sama
+    # Pemrosesan Kolom 'device'
     if 'device' in df.columns:
         df['device'] = df['device'].fillna('N/A').astype(str)
         df['device'] = df['device'].apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
     else:
         df['device'] = 'N/A'
 
+    # Pemrosesan Kolom 'price'
     if 'price' in df.columns:
         def format_price_robustly(price_input):
             if pd.isna(price_input): return "Gratis"
             price_str = str(price_input).strip().lower()
             if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']: return "Gratis"
-            try: return f"Rp{float(price_str):,.0f}"
-            except ValueError: return str(price_input).strip()
+            try:
+                price_num = float(price_str)
+                return f"Rp{price_num:,.0f}"
+            except ValueError:
+                return str(price_input).strip()
         df['price'] = df['price'].apply(format_price_robustly)
     else:
         df['price'] = 'N/A'
 
+    # Proses kolom lainnya
     other_cols = {'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A', 'tags': 'N/A', 'categories': 'N/A'}
     for col, default in other_cols.items():
         if col in df.columns:
@@ -131,7 +136,7 @@ def get_recommendations_based_on_preferences(data_df):
     return pd.DataFrame()
 
 def display_game_card(game_row):
-    """Menampilkan kartu informasi game."""
+    """Menampilkan kartu informasi game dengan Price, Device, dan tombol YouTube."""
     nama = game_row.get('name', 'N/A')
     short_description = game_row.get('short description', '')
     price = game_row.get('price', 'N/A')
@@ -142,6 +147,7 @@ def display_game_card(game_row):
     tags = ", ".join(t.strip() for t in str(game_row.get('tags', '')).split(',') if t.strip()) or 'N/A'
     kategoris = ", ".join(k.strip() for k in str(game_row.get('categories', '')).split(',') if k.strip()) or 'N/A'
     
+    # Membuat URL pencarian YouTube yang valid
     youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(f'{nama} gameplay')}"
 
     st.markdown(f"""
@@ -207,7 +213,9 @@ if not df.empty:
 
     elif halaman == "Penjelasan Metode":
         st.title("📚 Penjelasan Metode")
-        st.write("Penjelasan metode...") # Konten tidak diubah
+        st.write("""
+        Aplikasi ini menggunakan metode **Content-Based Filtering** untuk merekomendasikan game...
+        """) # Konten tidak diubah
 
     elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]:
         page_map = {
