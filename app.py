@@ -185,10 +185,8 @@ if halaman == "Beranda":
 elif halaman == "Penjelasan Metode":
     st.title("📚 Penjelasan Metode")
     st.write("""Aplikasi ini menggunakan metode **Content-Based Filtering** untuk merekomendasikan game. Ini berarti rekomendasi didasarkan pada karakteristik game itu sendiri, seperti deskripsi, genre, tag, dan kategorinya, serta preferensi Anda yang tercatat dari interaksi sebelumnya.
-
-    ### Bagaimana Cara Kerjanya?
+    Bagaimana Cara Kerjanya?
     Model utama yang digunakan adalah **Support Vector Machine (SVM)**. SVM adalah algoritma Machine Learning yang sangat efektif untuk tugas klasifikasi. Dalam konteks ini, SVM dilatih untuk "memahami" hubungan antara teks (seperti deskripsi game) dan atribut-atribut seperti genre, tag, atau kategori.
-
     Anda mungkin bertanya, "Mengapa hanya SVM, tidak termasuk TF-IDF?"
     **TF-IDF (Term Frequency-Inverse Document Frequency) sebenarnya adalah bagian integral dari proses ini, meskipun tidak secara eksplisit dimuat sebagai model terpisah di sini.**
     """)
