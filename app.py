@@ -6,7 +6,7 @@ import joblib
 from collections import deque
 import math
 import urllib.parse
-import re # Ditambahkan untuk parsing yang aman
+import re
 
 # Konfigurasi halaman
 st.set_page_config(initial_sidebar_state="expanded")
@@ -74,19 +74,24 @@ def load_data():
         df.drop_duplicates(subset=['name'], inplace=True, keep='first')
 
     df['device'] = df.get('device', pd.Series(dtype='str')).fillna('N/A').astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else 'N/A')
-    
+
+    # --- BLOK KODE YANG DIPERBARUI UNTUK HARGA ---
     def format_price(price_input):
         if pd.isna(price_input): return "Gratis"
         price_str = str(price_input).strip().lower()
         if not price_str or price_str in ['0', '0.0', 'free', 'gratis', 'nan', 'none']: return "Gratis"
-        try: return f"Rp{float(price_str):,.0f}"
-        except ValueError: return str(price_input).strip()
+        try:
+            # Hanya mengubah simbol ke USD dan formatnya, tanpa konversi kurs
+            return f"${float(price_str):,.2f}"
+        except ValueError:
+            return str(price_input).strip()
     df['price'] = df.get('price', pd.Series(dtype='str')).apply(format_price)
+    # --- AKHIR BLOK KODE YANG DIPERBARUI ---
 
     other_cols = {'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A', 'tags': 'N/A', 'categories': 'N/A', 'platforms': 'N/A'}
     for col, default in other_cols.items():
         df[col] = df.get(col, pd.Series(dtype='str')).fillna(default).astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else default)
-    
+
     df['header image'] = df.get('header image', pd.Series(dtype='str')).fillna('').apply(lambda x: x if isinstance(x, str) and x.startswith("http") else "")
     df['positive reviews'] = pd.to_numeric(df.get('positive reviews', pd.Series(dtype='float')), errors='coerce').fillna(0)
 
@@ -119,11 +124,11 @@ def display_game_card(game_row):
     price = game_row.get('price', 'N/A')
     device = game_row.get('device', 'N/A')
     gambar = game_row.get('header image', '') or PLACEHOLDER_IMAGE
-    
+
     genres = ", ".join(g.strip() for g in str(game_row.get('genre', '')).split(',') if g.strip()) or 'N/A'
     tags = ", ".join(t.strip() for t in str(game_row.get('tags', '')).split(',') if t.strip()) or 'N/A'
     kategoris = ", ".join(k.strip() for k in str(game_row.get('categories', '')).split(',') if k.strip()) or 'N/A'
-    
+
     youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(f'{nama} gameplay')}"
 
     st.markdown(f"""
@@ -173,7 +178,7 @@ if halaman == "Beranda":
     st.title("🎮 Rekomendasi Game untuk Anda")
     st.write("Dapatkan rekomendasi game berdasarkan histori pilihan Anda.")
     st.markdown("---")
-    
+
     if df.empty or models is None:
         st.error("Gagal memuat data atau model. Aplikasi tidak dapat menampilkan rekomendasi.")
     else:
@@ -215,9 +220,9 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
         }
         col_name, title_name, key_name = page_map[halaman]
         st.title(f"🎯 Rekomendasi Berdasarkan {title_name}")
-        
+
         items = sorted(list(set(item.strip() for sublist in df[col_name].dropna() for item in sublist.split(',') if item.strip() and item.strip() != 'N/A')))
-        
+
         if not items:
             st.warning(f"Tidak ada {title_name.lower()} yang ditemukan.")
         else:
@@ -240,7 +245,7 @@ elif halaman == "Rekomendasi Harga":
         if "Gratis" in prices:
             prices.remove("Gratis")
             prices.insert(0, "Gratis")
-        
+
         pilihan = st.selectbox("Pilih harga sebagai filter:", ["Pilih Harga"] + prices)
         if pilihan != "Pilih Harga":
             hasil = df[df['price'] == pilihan].head(DISPLAY_LIMIT)
@@ -249,32 +254,25 @@ elif halaman == "Rekomendasi Harga":
         else:
             st.info("Pilih harga dari daftar untuk melihat rekomendasi.")
 
-# --- BLOK KODE YANG DIPERBARUI ---
 elif halaman == "Rekomendasi Device":
     st.title("💻 Rekomendasi Berdasarkan Spesifikasi Device")
     st.write("Filter game berdasarkan Platform, CPU, dan RAM. Opsi filter dibuat dari data yang tersedia.")
-    
+
     if df.empty:
          st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
     else:
         hasil = df.copy()
-        
-        # --- 1. Filter Platform ---
+
         platforms = sorted(list(set(item.strip() for sublist in df['platforms'].dropna() for item in sublist.split(',') if item.strip() and item.strip() != 'N/A')))
         pilihan_platform = st.selectbox("1. Pilih Platform (Wajib)", ["Pilih Platform"] + platforms)
 
-        # Hanya lanjutkan jika platform sudah dipilih
         if pilihan_platform != "Pilih Platform":
             hasil = hasil[hasil['platforms'].str.contains(pilihan_platform, case=False, na=False)]
 
-            # --- 2. Filter CPU (Opsional) ---
-            # Ekstrak model CPU dari kolom 'device' untuk data yang sudah difilter platform
             cpu_list = hasil['device'].str.extract(r'CPU:\s*([^;]+)')[0].dropna().unique()
             cleaned_cpus = sorted([cpu.strip() for cpu in cpu_list if cpu.strip()])
             pilihan_cpu = st.selectbox("2. Pilih CPU (Opsional)", ["Semua CPU"] + cleaned_cpus)
 
-            # --- 3. Filter RAM (Opsional) ---
-            # Ekstrak nilai RAM dari kolom 'device'
             ram_list = hasil['device'].str.extract(r'(\d+)\s*GB RAM')[0].dropna()
             if not ram_list.empty:
                 unique_rams = sorted(ram_list.astype(int).unique())
@@ -285,7 +283,6 @@ elif halaman == "Rekomendasi Device":
                 st.markdown("<small>_Tidak ada data RAM spesifik untuk pilihan saat ini._</small>", unsafe_allow_html=True)
 
 
-            # --- Terapkan Filter Tambahan & Tampilkan Hasil ---
             filters_applied = [f"Platform: {pilihan_platform}"]
 
             if pilihan_cpu != "Semua CPU":
@@ -301,7 +298,7 @@ elif halaman == "Rekomendasi Device":
             subheader_title = "Rekomendasi Game untuk " + ", ".join(filters_applied)
             st.subheader(subheader_title)
             display_recommendations(hasil.head(DISPLAY_LIMIT))
-        
+
         else:
             st.info("Silakan pilih platform terlebih dahulu untuk menampilkan filter dan rekomendasi.")
 
@@ -318,7 +315,7 @@ elif halaman == "Histori":
                 display_game_card(game_details.iloc[0])
     else:
         st.info("Anda belum melihat game apa pun.")
-    
+
     st.markdown("---")
     if st.button("Bersihkan Histori Game yang Dilihat"):
         st.session_state.viewed_games.clear()
@@ -326,9 +323,9 @@ elif halaman == "Histori":
 
     st.markdown("---")
     st.subheader("Preferensi Tersimpan")
-    
+
     col1, col2, col3 = st.columns(3)
-    
+
     def display_preference_list(column, title):
         with column:
             st.markdown(f"**{title}:**")
