@@ -82,7 +82,7 @@ def load_data():
         except ValueError: return str(price_input).strip()
     df['price'] = df.get('price', pd.Series(dtype='str')).apply(format_price)
 
-    other_cols = {'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A', 'tags': 'N/A', 'categories': 'N/A'}
+    other_cols = {'short description': 'Deskripsi tidak tersedia', 'genre': 'N/A', 'tags': 'N/A', 'categories': 'N/A', 'platforms': 'N/A'}
     for col, default in other_cols.items():
         df[col] = df.get(col, pd.Series(dtype='str')).fillna(default).astype(str).apply(lambda x: x.strip() if x.strip() and x.lower() not in ['nan', 'none'] else default)
     
@@ -166,7 +166,8 @@ if "viewed_games" not in st.session_state:
 
 with st.sidebar:
     st.title("Dashboard")
-    halaman = st.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Histori"])
+    # --- PENAMBAHAN OPSI HALAMAN BARU DI SINI ---
+    halaman = st.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Rekomendasi Harga", "Rekomendasi Device", "Histori"])
 
 if halaman == "Beranda":
     st.title("🎮 Rekomendasi Game untuk Anda")
@@ -229,6 +230,47 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
                 display_recommendations(hasil)
             else:
                 st.info(f"Pilih {title_name.lower()} dari daftar untuk melihat rekomendasi.")
+
+# --- HALAMAN BARU: REKOMENDASI HARGA ---
+elif halaman == "Rekomendasi Harga":
+    st.title("💰 Rekomendasi Berdasarkan Harga")
+    if df.empty:
+        st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
+    else:
+        # Mengurutkan harga dan menempatkan "Gratis" di awal
+        prices = sorted(list(df['price'].unique()))
+        if "Gratis" in prices:
+            prices.remove("Gratis")
+            prices.insert(0, "Gratis")
+        
+        pilihan = st.selectbox("Pilih harga sebagai filter:", ["Pilih Harga"] + prices)
+        if pilihan != "Pilih Harga":
+            hasil = df[df['price'] == pilihan].head(DISPLAY_LIMIT)
+            st.subheader(f"Rekomendasi Game dengan Harga: {pilihan}")
+            display_recommendations(hasil)
+        else:
+            st.info("Pilih harga dari daftar untuk melihat rekomendasi.")
+
+# --- HALAMAN BARU: REKOMENDASI DEVICE ---
+elif halaman == "Rekomendasi Device":
+    st.title("💻 Rekomendasi Berdasarkan Device")
+    if df.empty:
+         st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
+    else:
+        # Menggunakan kolom 'platforms' untuk filter device
+        items = sorted(list(set(item.strip() for sublist in df['platforms'].dropna() for item in sublist.split(',') if item.strip() and item.strip() != 'N/A')))
+        
+        if not items:
+            st.warning("Tidak ada platform device yang ditemukan.")
+        else:
+            pilihan = st.selectbox("Pilih platform device sebagai filter:", ["Pilih Device"] + items)
+            if pilihan != "Pilih Device":
+                # Filter berdasarkan kolom 'platforms'
+                hasil = df[df['platforms'].str.contains(pilihan, case=False, na=False)].head(DISPLAY_LIMIT)
+                st.subheader(f"Rekomendasi Game untuk Device: {pilihan.capitalize()}")
+                display_recommendations(hasil)
+            else:
+                st.info("Pilih device dari daftar untuk melihat rekomendasi.")
 
 elif halaman == "Histori":
     st.title("🕒 Histori Game yang Dilihat")
