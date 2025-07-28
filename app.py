@@ -6,6 +6,7 @@ import joblib
 from collections import deque
 import math
 import urllib.parse
+import re # Ditambahkan untuk parsing yang aman
 
 # Konfigurasi halaman
 st.set_page_config(initial_sidebar_state="expanded")
@@ -166,7 +167,6 @@ if "viewed_games" not in st.session_state:
 
 with st.sidebar:
     st.title("Dashboard")
-    # --- PENAMBAHAN OPSI HALAMAN BARU DI SINI ---
     halaman = st.radio("Pilih Halaman:", ["Beranda", "Penjelasan Metode", "Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori", "Rekomendasi Harga", "Rekomendasi Device", "Histori"])
 
 if halaman == "Beranda":
@@ -231,13 +231,11 @@ elif halaman in ["Rekomendasi Genre", "Rekomendasi Tag", "Rekomendasi Kategori"]
             else:
                 st.info(f"Pilih {title_name.lower()} dari daftar untuk melihat rekomendasi.")
 
-# --- HALAMAN BARU: REKOMENDASI HARGA ---
 elif halaman == "Rekomendasi Harga":
     st.title("💰 Rekomendasi Berdasarkan Harga")
     if df.empty:
         st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
     else:
-        # Mengurutkan harga dan menempatkan "Gratis" di awal
         prices = sorted(list(df['price'].unique()))
         if "Gratis" in prices:
             prices.remove("Gratis")
@@ -251,26 +249,62 @@ elif halaman == "Rekomendasi Harga":
         else:
             st.info("Pilih harga dari daftar untuk melihat rekomendasi.")
 
-# --- HALAMAN BARU: REKOMENDASI DEVICE ---
+# --- BLOK KODE YANG DIPERBARUI ---
 elif halaman == "Rekomendasi Device":
-    st.title("💻 Rekomendasi Berdasarkan Device")
+    st.title("💻 Rekomendasi Berdasarkan Spesifikasi Device")
+    st.write("Filter game berdasarkan Platform, CPU, dan RAM. Opsi filter dibuat dari data yang tersedia.")
+    
     if df.empty:
          st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
     else:
-        # Menggunakan kolom 'platforms' untuk filter device
-        items = sorted(list(set(item.strip() for sublist in df['platforms'].dropna() for item in sublist.split(',') if item.strip() and item.strip() != 'N/A')))
+        hasil = df.copy()
         
-        if not items:
-            st.warning("Tidak ada platform device yang ditemukan.")
-        else:
-            pilihan = st.selectbox("Pilih platform device sebagai filter:", ["Pilih Device"] + items)
-            if pilihan != "Pilih Device":
-                # Filter berdasarkan kolom 'platforms'
-                hasil = df[df['platforms'].str.contains(pilihan, case=False, na=False)].head(DISPLAY_LIMIT)
-                st.subheader(f"Rekomendasi Game untuk Device: {pilihan.capitalize()}")
-                display_recommendations(hasil)
+        # --- 1. Filter Platform ---
+        platforms = sorted(list(set(item.strip() for sublist in df['platforms'].dropna() for item in sublist.split(',') if item.strip() and item.strip() != 'N/A')))
+        pilihan_platform = st.selectbox("1. Pilih Platform (Wajib)", ["Pilih Platform"] + platforms)
+
+        # Hanya lanjutkan jika platform sudah dipilih
+        if pilihan_platform != "Pilih Platform":
+            hasil = hasil[hasil['platforms'].str.contains(pilihan_platform, case=False, na=False)]
+
+            # --- 2. Filter CPU (Opsional) ---
+            # Ekstrak model CPU dari kolom 'device' untuk data yang sudah difilter platform
+            cpu_list = hasil['device'].str.extract(r'CPU:\s*([^;]+)')[0].dropna().unique()
+            cleaned_cpus = sorted([cpu.strip() for cpu in cpu_list if cpu.strip()])
+            pilihan_cpu = st.selectbox("2. Pilih CPU (Opsional)", ["Semua CPU"] + cleaned_cpus)
+
+            # --- 3. Filter RAM (Opsional) ---
+            # Ekstrak nilai RAM dari kolom 'device'
+            ram_list = hasil['device'].str.extract(r'(\d+)\s*GB RAM')[0].dropna()
+            if not ram_list.empty:
+                unique_rams = sorted(ram_list.astype(int).unique())
+                ram_options = [f"{ram} GB" for ram in unique_rams]
+                pilihan_ram = st.selectbox("3. Pilih RAM (Opsional)", ["Semua RAM"] + ram_options)
             else:
-                st.info("Pilih device dari daftar untuk melihat rekomendasi.")
+                pilihan_ram = "Semua RAM"
+                st.markdown("<small>_Tidak ada data RAM spesifik untuk pilihan saat ini._</small>", unsafe_allow_html=True)
+
+
+            # --- Terapkan Filter Tambahan & Tampilkan Hasil ---
+            filters_applied = [f"Platform: {pilihan_platform}"]
+
+            if pilihan_cpu != "Semua CPU":
+                hasil = hasil[hasil['device'].str.contains(re.escape(pilihan_cpu), case=False, na=False)]
+                filters_applied.append(f"CPU: {pilihan_cpu}")
+
+            if pilihan_ram != "Semua RAM":
+                ram_search_term = pilihan_ram + " RAM"
+                hasil = hasil[hasil['device'].str.contains(ram_search_term, case=False, na=False)]
+                filters_applied.append(f"RAM: {pilihan_ram}")
+
+            st.markdown("---")
+            subheader_title = "Rekomendasi Game untuk " + ", ".join(filters_applied)
+            st.subheader(subheader_title)
+            display_recommendations(hasil.head(DISPLAY_LIMIT))
+        
+        else:
+            st.info("Silakan pilih platform terlebih dahulu untuk menampilkan filter dan rekomendasi.")
+
 
 elif halaman == "Histori":
     st.title("🕒 Histori Game yang Dilihat")
@@ -293,10 +327,8 @@ elif halaman == "Histori":
     st.markdown("---")
     st.subheader("Preferensi Tersimpan")
     
-    # === PERBAIKAN DI SINI: Menggunakan loop untuk tampilan yang rapi ===
     col1, col2, col3 = st.columns(3)
     
-    # Fungsi bantuan untuk menampilkan daftar preferensi
     def display_preference_list(column, title):
         with column:
             st.markdown(f"**{title}:**")
