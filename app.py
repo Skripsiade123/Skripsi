@@ -23,36 +23,46 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah diperbarui untuk TEMA GELAP total
+# Blok CSS final untuk tema terang yang konsisten
 hide_streamlit_style = """
     <style>
-    /* 1. ATURAN TEMA GELAP */
+    /* 1. ATURAN BACKGROUND TERANG */
     .stApp {
-        background-color: #0E1117; /* Background utama gelap */
+        background-color: #F0F2F6; /* Warna background utama (abu-abu terang) */
     }
-    /* Mengatur warna teks default menjadi putih secara global */
-    body, h1, h2, h3, h4, h5, h6, p, label, li, span, .stAlert p {
-        color: white !important;
+    .main { 
+        padding-left: 300px !important; 
     }
 
-    /* 2. [PERBAIKAN] TEMA UNTUK SELECTBOX DAN DROPDOWN */
-    /* Membuat background selectbox & dropdown gelap agar konsisten */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"],
+    /* 2. MEMBUAT SEMUA TEKS MENJADI HITAM */
+    h1, h2, h3, h4, h5, h6, p, label, li, span,
+    .stAlert p
+    {
+        color: #000000 !important; 
+    }
+
+    /* 3. [PERBAIKAN] MENYAMAKAN TEMA SELECTBOX MENJADI TERANG */
+    /* Kotak selectbox dan teks di dalamnya */
+    div[data-testid="stSelectbox"] > div {
+        background-color: #FFFFFF;
+        color: #000000 !important;
+    }
+    div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+    /* Menu dropdown yang muncul */
     div[data-baseweb="popover"] ul {
-        background-color: #262730;
+        background-color: #FFFFFF;
     }
-    /* Membuat teks di dalam selectbox & dropdown menjadi putih */
-    div[data-testid="stSelectbox"] div,
     div[data-baseweb="popover"] ul li {
-        color: white !important;
+        color: #000000 !important;
     }
-    /* Style untuk hover di dropdown */
     div[data-baseweb="popover"] ul li:hover {
-        background-color: #31333F;
+        background-color: #F0F2F6; /* Warna hover untuk dropdown */
     }
 
-    /* 3. [PERBAIKAN] ATURAN UNTUK KARTU GAME */
-    /* Memastikan semua teks di kartu game terlihat jelas */
+    /* 4. PENGECUALIAN UNTUK KARTU GAME AGAR TETAP GELAP */
     div[style*="background-color: #222"] * {
         color: white !important;
     }
@@ -60,7 +70,7 @@ hide_streamlit_style = """
         color: #ccc !important;
     }
 
-    /* 4. ATURAN SIDEBAR */
+    /* 5. ATURAN SIDEBAR PUTIH */
     section[data-testid="stSidebar"] {
         visibility: visible !important; 
         display: block !important; 
@@ -68,11 +78,10 @@ hide_streamlit_style = """
         left: 0px !important; 
         transform: none !important; 
         z-index: 9999 !important;
-        background-color: #1a1a24 !important; /* Background sidebar gelap */
+        background-color: #FFFFFF !important;
     }
     
-    /* 5. ATURAN LAYOUT & SEMBUNYIKAN ELEMEN */
-    .main { padding-left: 300px !important; }
+    /* 6. MENYEMBUNYIKAN ELEMEN BAWAAN STREAMLIT */
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
     .stAlert { display: none !important; }
     .stApp > header, .css-1lcbmhc, .css-1d391kg, .css-1f198p6 {
