@@ -23,35 +23,24 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah diperbarui agar SEMUA teks mudah terbaca
+# Blok CSS yang telah diperbarui untuk mengembalikan tema gelap
 hide_streamlit_style = """
     <style>
-    /* 1. ATURAN BACKGROUND & LAYOUT */
+    /* 1. [PERUBAHAN] MENGEMBALIKAN TEMA GELAP */
+    /* Mengatur background utama aplikasi menjadi gelap */
     .stApp {
-        background-color: #F0F2F6; /* Warna background utama (abu-abu terang) */
+        background-color: #0E1117;
     }
-    .main { 
-        padding-left: 300px !important; 
-    }
-
-    /* 2. [PERUBAHAN UTAMA] MEMBUAT SEMUA TEKS MENJADI HITAM */
+    
+    /* Mengatur agar warna teks default menjadi putih */
     h1, h2, h3, h4, h5, h6, p, label, li, span,
-    div[data-baseweb="select"] > div, /* Teks di dalam selectbox */
-    .stAlert p /* Teks di dalam st.info, st.warning, dll. */
+    div[data-baseweb="select"] > div,
+    .stAlert p
     {
-        color: #000000 !important; 
+        color: white; 
     }
 
-    /* 3. PENGECUALIAN UNTUK KARTU GAME */
-    /* Mengembalikan warna teks menjadi putih/abu-abu di kartu game */
-    div[style*="background-color: #222"] * {
-        color: white !important;
-    }
-    div[style*="background-color: #222"] p[style*="color: #ccc"] {
-        color: #ccc !important;
-    }
-
-    /* 4. ATURAN SIDEBAR */
+    /* 2. ATURAN SIDEBAR */
     section[data-testid="stSidebar"] {
         visibility: visible !important; 
         display: block !important; 
@@ -59,10 +48,21 @@ hide_streamlit_style = """
         left: 0px !important; 
         transform: none !important; 
         z-index: 9999 !important;
-        background-color: #FFFFFF !important; /* Background sidebar putih */
+        background-color: #1a1a24 !important; /* Warna sidebar gelap */
     }
-    
-    /* 5. MENYEMBUNYIKAN ELEMEN STREAMLIT BAWAAN */
+
+    /* 3. PENGECUALIAN UNTUK KARTU GAME (Tetap sama) */
+    div[style*="background-color: #222"] * {
+        color: white !important;
+    }
+    div[style*="background-color: #222"] p[style*="color: #ccc"] {
+        color: #ccc !important;
+    }
+
+    /* 4. ATURAN LAYOUT & SEMBUNYIKAN ELEMEN */
+    .main { 
+        padding-left: 300px !important; 
+    }
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
     .stAlert { display: none !important; }
     .stApp > header, .css-1lcbmhc, .css-1d391kg, .css-1f198p6 {
