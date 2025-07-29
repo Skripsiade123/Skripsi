@@ -23,29 +23,35 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah diperbarui agar teks sidebar mudah terbaca
+# Blok CSS yang telah diperbarui agar SEMUA teks mudah terbaca
 hide_streamlit_style = """
     <style>
-    /* CSS untuk Background Cerah dan Teks yang Terbaca */
+    /* 1. ATURAN BACKGROUND & LAYOUT */
     .stApp {
         background-color: #F0F2F6; /* Warna background utama (abu-abu terang) */
     }
-    
-    /* Mengatur warna teks default agar mudah dibaca di background terang */
-    body {
-        color: #262730; /* Warna teks gelap standar */
+    .main { 
+        padding-left: 300px !important; 
     }
 
-    /* --- [PERUBAHAN] Mengubah warna teks di sidebar menjadi hitam --- */
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] label {
+    /* 2. [PERUBAHAN UTAMA] MEMBUAT SEMUA TEKS MENJADI HITAM */
+    h1, h2, h3, h4, h5, h6, p, label, li, span,
+    div[data-baseweb="select"] > div, /* Teks di dalam selectbox */
+    .stAlert p /* Teks di dalam st.info, st.warning, dll. */
+    {
         color: #000000 !important; 
     }
-    /* --- Akhir Perubahan --- */
 
-    /* Aturan lain yang sudah ada */
-    #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
-    .stAlert { display: none !important; }
+    /* 3. PENGECUALIAN UNTUK KARTU GAME */
+    /* Mengembalikan warna teks menjadi putih/abu-abu di kartu game */
+    div[style*="background-color: #222"] * {
+        color: white !important;
+    }
+    div[style*="background-color: #222"] p[style*="color: #ccc"] {
+        color: #ccc !important;
+    }
+
+    /* 4. ATURAN SIDEBAR */
     section[data-testid="stSidebar"] {
         visibility: visible !important; 
         display: block !important; 
@@ -53,11 +59,12 @@ hide_streamlit_style = """
         left: 0px !important; 
         transform: none !important; 
         z-index: 9999 !important;
-        background-color: #FFFFFF !important; /* Membuat background sidebar menjadi putih */
+        background-color: #FFFFFF !important; /* Background sidebar putih */
     }
-    .main { 
-        padding-left: 300px !important; 
-    }
+    
+    /* 5. MENYEMBUNYIKAN ELEMEN STREAMLIT BAWAAN */
+    #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
+    .stAlert { display: none !important; }
     .stApp > header, .css-1lcbmhc, .css-1d391kg, .css-1f198p6 {
         display: none !important; 
         margin-top: 0px !important; 
