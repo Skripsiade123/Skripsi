@@ -41,8 +41,7 @@ hide_streamlit_style = """
         color: #000000 !important; 
     }
 
-    /* 3. [PERBAIKAN] MENYAMAKAN TEMA SELECTBOX MENJADI TERANG */
-    /* Kotak selectbox dan teks di dalamnya */
+    /* 3. MENYAMAKAN TEMA SELECTBOX MENJADI TERANG */
     div[data-testid="stSelectbox"] > div {
         background-color: #FFFFFF;
         color: #000000 !important;
@@ -51,7 +50,6 @@ hide_streamlit_style = """
         background-color: #FFFFFF !important;
         color: #000000 !important;
     }
-    /* Menu dropdown yang muncul */
     div[data-baseweb="popover"] ul {
         background-color: #FFFFFF;
     }
@@ -59,15 +57,16 @@ hide_streamlit_style = """
         color: #000000 !important;
     }
     div[data-baseweb="popover"] ul li:hover {
-        background-color: #F0F2F6; /* Warna hover untuk dropdown */
+        background-color: #F0F2F6;
     }
 
-    /* 4. PENGECUALIAN UNTUK KARTU GAME AGAR TETAP GELAP */
-    div[style*="background-color: #222"] * {
+    /* 4. [PERUBAHAN] PENGECUALIAN UNTUK KARTU GAME */
+    /* Memastikan teks di kartu game tetap putih dengan background abu-abu */
+    div[style*="background-color: #4A5568"] * {
         color: white !important;
     }
-    div[style*="background-color: #222"] p[style*="color: #ccc"] {
-        color: #ccc !important;
+    div[style*="background-color: #4A5568"] p[style*="color: #ccc"] {
+        color: #E2E8F0 !important; /* Abu-abu lebih terang untuk kontras */
     }
 
     /* 5. ATURAN SIDEBAR PUTIH */
@@ -189,8 +188,9 @@ def display_game_card(game_row):
 
     youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(f'{nama} gameplay')}"
 
+    # --- [PERUBAHAN] Mengubah background-color kartu game menjadi abu-abu ---
     st.markdown(f"""
-    <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #444; border-radius: 10px; margin-bottom: 20px; background-color: #222; color: white;">
+    <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #718096; border-radius: 10px; margin-bottom: 20px; background-color: #4A5568; color: white;">
         <div style="flex-shrink: 0;"><img src="{gambar}" style="width: 180px; height: 100%; border-radius: 10px; object-fit: cover;"></div>
         <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
