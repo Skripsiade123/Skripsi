@@ -23,7 +23,7 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah diperbarui untuk memperbaiki teks yang tidak terbaca
+# Blok CSS yang telah diperbarui untuk memperbaiki selectbox
 hide_streamlit_style = """
     <style>
     /* 1. ATURAN BACKGROUND & LAYOUT */
@@ -42,12 +42,26 @@ hide_streamlit_style = """
         color: #000000 !important; 
     }
     
-    /* [PERBAIKAN] Teks untuk Opsi di dalam dropdown/selectbox */
-    div[data-baseweb="popover"] li {
-        color: black !important;
+    /* 3. [PERBAIKAN] MENYAMAKAN TEMA SELECTBOX MENJADI TERANG */
+    /* Kotak selectbox */
+    div[data-testid="stSelectbox"] > div {
+        background-color: #FFFFFF;
+    }
+    /* Placeholder dan teks yang dipilih di dalam selectbox */
+    div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+    }
+    /* Menu dropdown yang muncul */
+    div[data-baseweb="popover"] ul {
+        background-color: #FFFFFF;
+        color: #000000 !important;
+    }
+    div[data-baseweb="popover"] ul li:hover {
+        background-color: #F0F2F6; /* Warna hover untuk dropdown */
     }
 
-    /* 3. [PERBAIKAN] PENGECUALIAN UNTUK KARTU GAME */
+
+    /* 4. PENGECUALIAN UNTUK KARTU GAME */
     /* Mengembalikan warna teks menjadi putih/abu-abu di kartu game */
     div[style*="background-color: #222"] h4,
     div[style*="background-color: #222"] p,
@@ -59,7 +73,7 @@ hide_streamlit_style = """
         color: #ccc !important;
     }
 
-    /* 4. ATURAN SIDEBAR */
+    /* 5. ATURAN SIDEBAR */
     section[data-testid="stSidebar"] {
         visibility: visible !important; 
         display: block !important; 
@@ -70,7 +84,7 @@ hide_streamlit_style = """
         background-color: #FFFFFF !important; /* Background sidebar putih */
     }
     
-    /* 5. MENYEMBUNYIKAN ELEMEN STREAMLIT BAWAAN */
+    /* 6. MENYEMBUNYIKAN ELEMEN STREAMLIT BAWAAN */
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
     .stAlert { display: none !important; }
     .stApp > header, .css-1lcbmhc, .css-1d391kg, .css-1f198p6 {
