@@ -23,7 +23,7 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah diperbarui agar teks mudah terbaca
+# Blok CSS yang telah diperbarui agar teks sidebar mudah terbaca
 hide_streamlit_style = """
     <style>
     /* CSS untuk Background Cerah dan Teks yang Terbaca */
@@ -35,6 +35,13 @@ hide_streamlit_style = """
     body {
         color: #262730; /* Warna teks gelap standar */
     }
+
+    /* --- [PERUBAHAN] Mengubah warna teks di sidebar menjadi hitam --- */
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] label {
+        color: #000000 !important; 
+    }
+    /* --- Akhir Perubahan --- */
 
     /* Aturan lain yang sudah ada */
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
