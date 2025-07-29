@@ -23,7 +23,7 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah diperbarui agar SEMUA teks mudah terbaca
+# Blok CSS yang telah diperbarui untuk memperbaiki teks yang tidak terbaca
 hide_streamlit_style = """
     <style>
     /* 1. ATURAN BACKGROUND & LAYOUT */
@@ -34,17 +34,25 @@ hide_streamlit_style = """
         padding-left: 300px !important; 
     }
 
-    /* 2. [PERUBAHAN UTAMA] MEMBUAT SEMUA TEKS MENJADI HITAM */
-    h1, h2, h3, h4, h5, h6, p, label, li, span,
-    div[data-baseweb="select"] > div, /* Teks di dalam selectbox */
-    .stAlert p /* Teks di dalam st.info, st.warning, dll. */
+    /* 2. MEMBUAT TEKS UTAMA MENJADI HITAM (Global) */
+    h1, h2, h3, h5, h6, p, label, li, span,
+    div[data-baseweb="select"] > div, /* Teks di dalam selectbox yang terpilih */
+    .stAlert p
     {
         color: #000000 !important; 
     }
+    
+    /* [PERBAIKAN] Teks untuk Opsi di dalam dropdown/selectbox */
+    div[data-baseweb="popover"] li {
+        color: black !important;
+    }
 
-    /* 3. PENGECUALIAN UNTUK KARTU GAME */
+    /* 3. [PERBAIKAN] PENGECUALIAN UNTUK KARTU GAME */
     /* Mengembalikan warna teks menjadi putih/abu-abu di kartu game */
-    div[style*="background-color: #222"] * {
+    div[style*="background-color: #222"] h4,
+    div[style*="background-color: #222"] p,
+    div[style*="background-color: #222"] strong,
+    div[style*="background-color: #222"] a {
         color: white !important;
     }
     div[style*="background-color: #222"] p[style*="color: #ccc"] {
