@@ -23,22 +23,42 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
+# Blok CSS yang telah dimodifikasi untuk background yang lebih cerah
 hide_streamlit_style = """
     <style>
+    /* CSS untuk Background Cerah */
+    .stApp {
+        background-color: #F0F2F6; /* Warna background utama (abu-abu terang) */
+    }
+    
+    /* Aturan lain yang sudah ada */
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
     .stAlert { display: none !important; }
     section[data-testid="stSidebar"] {
-        visibility: visible !important; display: block !important; width: 300px !important;
-        left: 0px !important; transform: none !important; z-index: 9999 !important;
+        visibility: visible !important; 
+        display: block !important; 
+        width: 300px !important;
+        left: 0px !important; 
+        transform: none !important; 
+        z-index: 9999 !important;
+        background-color: #FFFFFF !important; /* Membuat background sidebar menjadi putih */
     }
-    .main { padding-left: 300px !important; }
+    .main { 
+        padding-left: 300px !important; 
+    }
     .stApp > header, .css-1lcbmhc, .css-1d391kg, .css-1f198p6 {
-        display: none !important; margin-top: 0px !important; padding-top: 0px !important;
+        display: none !important; 
+        margin-top: 0px !important; 
+        padding-top: 0px !important;
     }
-    button[data-testid="stSidebarCollapseButton"] { visibility: hidden !important; display: none !important; }
+    button[data-testid="stSidebarCollapseButton"] { 
+        visibility: hidden !important; 
+        display: none !important; 
+    }
     </style>
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 # --- FUNGSI-FUNGSI ---
 
@@ -259,7 +279,7 @@ elif halaman == "Rekomendasi Device":
     st.write("Filter game berdasarkan Platform, CPU, dan RAM. Opsi filter dibuat dari data yang tersedia.")
 
     if df.empty:
-         st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
+        st.error("Gagal memuat data. Tidak dapat menampilkan filter.")
     else:
         hasil = df.copy()
 
