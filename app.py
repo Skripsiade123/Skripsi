@@ -60,16 +60,7 @@ hide_streamlit_style = """
         background-color: #F0F2F6;
     }
 
-    /* 4. [PERUBAHAN] PENGECUALIAN UNTUK KARTU GAME */
-    /* Memastikan teks di kartu game tetap putih dengan background abu-abu */
-    div[style*="background-color: #4A5568"] * {
-        color: white !important;
-    }
-    div[style*="background-color: #4A5568"] p[style*="color: #ccc"] {
-        color: #E2E8F0 !important; /* Abu-abu lebih terang untuk kontras */
-    }
-
-    /* 5. ATURAN SIDEBAR PUTIH */
+    /* 4. ATURAN SIDEBAR PUTIH */
     section[data-testid="stSidebar"] {
         visibility: visible !important; 
         display: block !important; 
@@ -80,7 +71,7 @@ hide_streamlit_style = """
         background-color: #FFFFFF !important;
     }
     
-    /* 6. MENYEMBUNYIKAN ELEMEN BAWAAN STREAMLIT */
+    /* 5. MENYEMBUNYIKAN ELEMEN BAWAAN STREAMLIT */
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
     .stAlert { display: none !important; }
     .stApp > header, .css-1lcbmhc, .css-1d391kg, .css-1f198p6 {
@@ -188,14 +179,14 @@ def display_game_card(game_row):
 
     youtube_url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(f'{nama} gameplay')}"
 
-    # --- [PERUBAHAN] Mengubah background-color kartu game menjadi abu-abu ---
+    # --- [PERUBAHAN] Mengubah background-color kartu game menjadi putih ---
     st.markdown(f"""
-    <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #718096; border-radius: 10px; margin-bottom: 20px; background-color: #4A5568; color: white;">
+    <div style="display: flex; gap: 20px; padding: 15px; border: 1px solid #E2E8F0; border-radius: 10px; margin-bottom: 20px; background-color: #FFFFFF;">
         <div style="flex-shrink: 0;"><img src="{gambar}" style="width: 180px; height: 100%; border-radius: 10px; object-fit: cover;"></div>
         <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
                 <h4 style="margin-top: 0; margin-bottom: 5px;">{nama}</h4>
-                <p style="font-size: 14px; margin-bottom: 10px; color: #ccc;">{short_description}</p>
+                <p style="font-size: 14px; margin-bottom: 10px; color: #555;">{short_description}</p>
                 <p style="font-size: 13px; line-height: 1.6;">
                     <strong>Genre:</strong> {genres} <br> <strong>Tags:</strong> {tags} <br> <strong>Kategori:</strong> {kategoris} <br>
                     <strong>Price:</strong> {price} <br> <strong>Device:</strong> {device}
