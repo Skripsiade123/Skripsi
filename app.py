@@ -23,14 +23,19 @@ SVM_MODEL_CATEGORY = "svm_model_categories.pkl"
 PLACEHOLDER_IMAGE = "https://via.placeholder.com/180x100.png?text=No+Image"
 
 # --- Custom CSS ---
-# Blok CSS yang telah dimodifikasi untuk background yang lebih cerah
+# Blok CSS yang telah diperbarui agar teks mudah terbaca
 hide_streamlit_style = """
     <style>
-    /* CSS untuk Background Cerah */
+    /* CSS untuk Background Cerah dan Teks yang Terbaca */
     .stApp {
         background-color: #F0F2F6; /* Warna background utama (abu-abu terang) */
     }
     
+    /* Mengatur warna teks default agar mudah dibaca di background terang */
+    body {
+        color: #262730; /* Warna teks gelap standar */
+    }
+
     /* Aturan lain yang sudah ada */
     #MainMenu, footer, header { visibility: hidden !important; display: none !important; }
     .stAlert { display: none !important; }
